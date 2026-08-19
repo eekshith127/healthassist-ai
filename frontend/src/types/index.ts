@@ -22,6 +22,37 @@ export interface User {
   activePrescriptionsCount?: number
 }
 
+export interface HealthProfile {
+  id?: number
+  userId?: number
+  user_id?: number
+  dateOfBirth?: string
+  date_of_birth?: string
+  sex?: string
+  heightCm?: number
+  height_cm?: number
+  weightKg?: number
+  weight_kg?: number
+  bloodGroup?: string
+  blood_group?: string
+  medicalConditions: string[]
+  medical_conditions?: string[]
+  medications: string[]
+  allergies: string[]
+  previousSurgeries: string[]
+  previous_surgeries?: string[]
+  familyHistory: string[]
+  family_history?: string[]
+  profileCompleted?: boolean
+  profile_completed?: boolean
+  bmi?: number
+  bmiCategory?: string
+  bmi_category?: string
+  age?: number
+  updatedAt?: string
+  updated_at?: string
+}
+
 export interface VitalMetric {
   id: string
   title: string

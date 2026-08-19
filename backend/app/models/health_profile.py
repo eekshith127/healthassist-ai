@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, ForeignKey, DateTime
 from backend.app.database.session import Base
 
 
@@ -8,15 +8,19 @@ class HealthProfile(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(
-        Integer, ForeignKey("users.id"), unique=True, nullable=False
+        Integer, ForeignKey("users.id"), unique=True, index=True, nullable=False
     )
-    age = Column(Integer, nullable=True)
-    gender = Column(String(50), nullable=True)
-    blood_type = Column(String(10), nullable=True)
-    allergies = Column(Text, nullable=True)  # JSON or comma-separated list
-    chronic_conditions = Column(Text, nullable=True)
-    current_medications = Column(Text, nullable=True)
-    emergency_contact = Column(String(255), nullable=True)
+    date_of_birth = Column(String(50), nullable=True)  # Format: YYYY-MM-DD
+    sex = Column(String(50), nullable=True)  # male, female, other
+    height_cm = Column(Float, nullable=True)
+    weight_kg = Column(Float, nullable=True)
+    blood_group = Column(String(20), nullable=True)  # O+, O-, A+, A-, B+, B-, AB+, AB-
+    medical_conditions = Column(Text, nullable=True)  # JSON-encoded string list of conditions
+    medications = Column(Text, nullable=True)  # JSON-encoded string list of active medications
+    allergies = Column(Text, nullable=True)  # JSON-encoded string list of allergies
+    previous_surgeries = Column(Text, nullable=True)  # JSON-encoded string list of past surgeries
+    family_history = Column(Text, nullable=True)  # JSON-encoded string list/dict of family conditions
+    profile_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime,

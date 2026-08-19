@@ -1,5 +1,6 @@
 import {
   User,
+  HealthProfile,
   VitalMetric,
   Medication,
   Allergy,
@@ -468,3 +469,40 @@ export const mockTriageScenarioResult: AssessmentRecord = {
     'If symptoms worsen beyond 5-7 days or fever develops, connect with a telehealth doctor.',
   ],
 }
+
+export const mockHealthProfile: HealthProfile = {
+  id: 1,
+  userId: 1,
+  dateOfBirth: '1994-05-14',
+  sex: 'male',
+  heightCm: 180,
+  weightKg: 75,
+  bloodGroup: 'O+',
+  medicalConditions: [
+    'Mild Exercise-Induced Bronchospasm (Asthma)',
+    'Seasonal Allergic Rhinitis (Hay Fever)',
+  ],
+  medications: [
+    'Loratadine 10mg Oral Tablet (Daily)',
+    'Albuterol Inhaler (PRN / As Needed)',
+  ],
+  allergies: [
+    'Penicillin / Amoxicillin (Severe Anaphylaxis Risk)',
+    'Peanuts & Tree Nuts (Moderate Reaction)',
+  ],
+  previousSurgeries: [
+    'Laparoscopic Appendectomy (2016)',
+    'Right Knee Arthroscopy (2020)',
+  ],
+  familyHistory: [
+    'Maternal Hypertension',
+    'Paternal Type 2 Diabetes',
+    'Maternal Asthma',
+  ],
+  profileCompleted: true,
+  bmi: 23.1,
+  bmiCategory: 'Normal weight',
+  age: 31,
+  updatedAt: '2026-08-19T10:30:00Z',
+}
+

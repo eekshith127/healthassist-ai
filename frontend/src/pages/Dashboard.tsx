@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Stethoscope,
@@ -27,10 +27,16 @@ import {
   mockAssessmentHistory,
   mockAppointments,
 } from '../services/mockData'
-import { AssessmentRecord } from '../types'
+import { AssessmentRecord, HealthProfile } from '../types'
+import { fetchHealthProfile } from '../services/profileService'
 
 export const Dashboard: React.FC = () => {
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null)
+  const [profile, setProfile] = useState<HealthProfile | null>(null)
+
+  useEffect(() => {
+    fetchHealthProfile().then(setProfile).catch(() => {})
+  }, [])
 
   const getVitalIcon = (iconName: string) => {
     switch (iconName) {
@@ -237,7 +243,7 @@ export const Dashboard: React.FC = () => {
                 View Wallet PDF
               </Link>
             </div>
-            <HealthCard showActions={false} />
+            <HealthCard profile={profile} showActions={false} />
           </div>
 
           {/* Safety & Protocol Box */}

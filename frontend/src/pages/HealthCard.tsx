@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CreditCard,
   PhoneCall,
@@ -6,15 +6,32 @@ import {
   Copy,
   Check,
   Smartphone,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { HealthCard as HealthCardWidget } from '../components/health/HealthCard'
 import { mockCurrentUser } from '../services/mockData'
+import { fetchHealthProfile } from '../services/profileService'
+import { HealthProfile } from '../types'
 
 export const HealthCard: React.FC = () => {
+  const [profile, setProfile] = useState<HealthProfile | null>(null)
+  const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [walletAdded, setWalletAdded] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const p = await fetchHealthProfile()
+        setProfile(p)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`https://healthassist.ai/med-id/${mockCurrentUser.patientId}`)
@@ -60,7 +77,13 @@ export const HealthCard: React.FC = () => {
 
       {/* Main Interactive Digital ID Card */}
       <div className="max-w-2xl mx-auto">
-        <HealthCardWidget showActions={true} />
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin" />
+          </div>
+        ) : (
+          <HealthCardWidget profile={profile} showActions={true} />
+        )}
       </div>
 
       {/* Emergency Speed Dial & First Responder Guidelines */}
