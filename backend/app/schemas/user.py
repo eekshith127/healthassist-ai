@@ -1,22 +1,24 @@
 import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
-class UserBase(BaseModel):
-    email: EmailStr
-    full_name: Optional[str] = None
-    role: Optional[str] = "patient"
-
-
-class UserCreate(UserBase):
-    password: str
-
-
-class UserRead(UserBase):
+class UserRead(BaseModel):
     id: int
-    is_active: bool
-    is_verified: bool
+    clerk_user_id: str
+    name: Optional[str] = None
+    email: str
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MeResponse(BaseModel):
+    id: int
+    clerk_user_id: str
+    name: Optional[str] = None
+    email: str
+    profile_completed: bool
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

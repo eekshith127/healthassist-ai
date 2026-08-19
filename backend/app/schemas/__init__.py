@@ -1,5 +1,11 @@
 from backend.app.schemas.health import HealthResponse
-from backend.app.schemas.user import UserBase, UserCreate, UserRead
+from backend.app.schemas.user import UserRead, MeResponse
+from backend.app.schemas.profile import (
+    HealthProfileBase,
+    HealthProfileCreate,
+    HealthProfileUpdate,
+    HealthProfileRead,
+)
 from backend.app.schemas.assessment import AssessmentCreate, AssessmentRead
 from backend.app.schemas.health_profile import (
     HealthProfileBase,
@@ -11,9 +17,12 @@ from backend.app.schemas.health_profile import (
 
 __all__ = [
     "HealthResponse",
-    "UserBase",
-    "UserCreate",
     "UserRead",
+    "MeResponse",
+    "HealthProfileBase",
+    "HealthProfileCreate",
+    "HealthProfileUpdate",
+    "HealthProfileRead",
     "AssessmentCreate",
     "AssessmentRead",
     "HealthProfileBase",

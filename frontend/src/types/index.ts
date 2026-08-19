@@ -12,7 +12,23 @@ export interface User {
   id: number
   email: string
   fullName: string
-  role: 'patient' | 'doctor' | 'admin'
+  role?: 'patient' | 'doctor' | 'admin'
+  patientId?: string
+  avatarUrl?: string
+  phone?: string
+  bloodType?: string
+  dateOfBirth?: string
+  allergiesCount?: number
+  activePrescriptionsCount?: number
+}
+
+export interface UserMe {
+  id: number
+  clerk_user_id: string
+  name?: string | null
+  email: string
+  fullName?: string
+  role?: 'patient' | 'doctor' | 'admin'
   avatarUrl?: string
   patientId?: string
   phone?: string
@@ -20,6 +36,8 @@ export interface User {
   dateOfBirth?: string
   allergiesCount?: number
   activePrescriptionsCount?: number
+  profile_completed: boolean
+  created_at: string
 }
 
 export interface HealthProfile {
@@ -35,13 +53,13 @@ export interface HealthProfile {
   weight_kg?: number
   bloodGroup?: string
   blood_group?: string
-  medicalConditions: string[]
+  medicalConditions?: string[]
   medical_conditions?: string[]
-  medications: string[]
-  allergies: string[]
-  previousSurgeries: string[]
+  medications?: string[]
+  allergies?: string[]
+  previousSurgeries?: string[]
   previous_surgeries?: string[]
-  familyHistory: string[]
+  familyHistory?: string[]
   family_history?: string[]
   profileCompleted?: boolean
   profile_completed?: boolean
@@ -50,6 +68,22 @@ export interface HealthProfile {
   bmi_category?: string
   age?: number
   updatedAt?: string
+  updated_at?: string
+}
+
+export interface HealthProfileData {
+  id?: number
+  user_id?: number
+  age?: number | string | null
+  gender?: string | null
+  blood_type?: string | null
+  allergies?: string | null
+  chronic_conditions?: string | null
+  current_medications?: string | null
+  emergency_contact?: string | null
+  emergency_phone?: string | null
+  is_completed?: boolean
+  created_at?: string
   updated_at?: string
 }
 
@@ -82,30 +116,53 @@ export interface Allergy {
   severity: 'mild' | 'moderate' | 'severe' | 'life-threatening'
 }
 
+export interface DifferentialDiagnosis {
+  name: string
+  probability: number
+  description: string
+}
+
+export interface ModelVotes {
+  geminiMed: number
+  medPalm: number
+  clinicalGpt: number
+}
+
 export interface AssessmentRecord {
-  id: string
+  id: number | string
+  user_id?: number
   symptoms: string
-  triageLevel: TriageSeverity
-  aiSummary: string
-  differentialDiagnoses: Array<{
-    name: string
-    probability: number
-    description: string
-  }>
-  consensusScore: number
-  modelVotes: {
-    geminiMed: number
-    medPalm: number
-    clinicalGpt: number
-  }
-  recommendedAction: string
+  duration?: string | null
+  severity?: string | null
+  triage_level?: string
+  triageLevel?: TriageSeverity
+  ai_summary?: string | null
+  aiSummary?: string
+  differentialDiagnoses?: DifferentialDiagnosis[]
+  consensusScore?: number
+  consensus_score?: number | null
+  modelVotes?: ModelVotes
+  safety_checked?: string
+  recommended_specialist?: string | null
   recommendedSpecialist?: string
-  createdAt: string
-  status: 'active' | 'resolved' | 'escalated'
-  duration?: string
+  recommendedAction?: string
+  status?: 'active' | 'resolved' | 'escalated'
   reportedPainScale?: number
   emergencyRedFlags?: string[]
   selfCareAdvice?: string[]
+  createdAt?: string
+  created_at?: string
+}
+
+export interface AssessmentCreatePayload {
+  symptoms: string
+  duration?: string
+  severity?: string
+  triage_level?: string
+  ai_summary?: string
+  consensus_score?: number
+  safety_checked?: string
+  recommended_specialist?: string
 }
 
 export interface ChatOption {
@@ -134,13 +191,13 @@ export interface HealthcareProvider {
   rating: number
   reviewsCount: number
   availability: string
-  experienceYears: number
+  experienceYears?: number
   imageUrl?: string
-  initials: string
+  initials?: string
   acceptingNewPatients: boolean
-  languages: string[]
-  telehealthFee: string
-  nextSlots: string[]
+  languages?: string[]
+  telehealthFee?: string
+  nextSlots?: string[]
 }
 
 export interface UpcomingAppointment {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Clock,
   Download,
@@ -7,6 +7,7 @@ import {
   UserCheck,
   Check,
 } from 'lucide-react'
+import { useAuth } from '@clerk/clerk-react'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -15,12 +16,34 @@ import { AssessmentCard } from '../components/assessment/AssessmentCard'
 import { ResultCard } from '../components/assessment/ResultCard'
 import { mockAssessmentHistory } from '../services/mockData'
 import { AssessmentRecord } from '../types'
+import { assessmentApi } from '../services/api'
 
 export const History: React.FC = () => {
+  const { getToken } = useAuth()
   const [filter, setFilter] = useState<'all' | 'triage' | 'consult'>('all')
   const [search, setSearch] = useState('')
   const [selectedRecord, setSelectedRecord] = useState<AssessmentRecord | null>(null)
   const [downloadAllState, setDownloadAllState] = useState(false)
+  const [assessments, setAssessments] = useState<AssessmentRecord[]>(mockAssessmentHistory)
+
+  useEffect(() => {
+    let isMounted = true
+    const loadHistory = async () => {
+      try {
+        const token = await getToken()
+        const data = await assessmentApi.getAssessments(token)
+        if (isMounted && data && data.length > 0) {
+          setAssessments(data)
+        }
+      } catch (err) {
+        console.debug('Using cached assessments:', err)
+      }
+    }
+    loadHistory()
+    return () => {
+      isMounted = false
+    }
+  }, [getToken])
 
   const handleDownloadAll = () => {
     setDownloadAllState(true)
@@ -52,11 +75,13 @@ export const History: React.FC = () => {
     },
   ]
 
-  const filteredAssessments = mockAssessmentHistory.filter((item) => {
+  const filteredAssessments = assessments.filter((item) => {
+    const summary = item.aiSummary || item.ai_summary || ''
+    const idStr = String(item.id)
     const matchesSearch =
       item.symptoms.toLowerCase().includes(search.toLowerCase()) ||
-      item.id.toLowerCase().includes(search.toLowerCase()) ||
-      item.aiSummary.toLowerCase().includes(search.toLowerCase())
+      idStr.toLowerCase().includes(search.toLowerCase()) ||
+      summary.toLowerCase().includes(search.toLowerCase())
     return matchesSearch
   })
 
@@ -218,3 +243,5 @@ export const History: React.FC = () => {
     </div>
   )
 }
+
+export default History

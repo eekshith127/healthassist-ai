@@ -2,7 +2,7 @@ import React from 'react'
 import { Clock, ShieldCheck, ChevronRight, Stethoscope } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { SeverityBadge } from '../common/SeverityBadge'
-import { AssessmentRecord } from '../../types'
+import { AssessmentRecord, TriageSeverity } from '../../types'
 import { cn } from '../../utils/cn'
 
 export interface AssessmentCardProps {
@@ -16,6 +16,11 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
   onViewDetails,
   className,
 }) => {
+  const triage = (assessment.triageLevel || assessment.triage_level || 'non-urgent') as TriageSeverity
+  const score = assessment.consensusScore ?? assessment.consensus_score ?? 98.4
+  const summary = assessment.aiSummary || assessment.ai_summary || ''
+  const created = assessment.createdAt || assessment.created_at || 'Recent'
+
   return (
     <Card
       className={cn(
@@ -35,11 +40,11 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
               <span className="font-mono text-xs font-semibold text-slate-500">
                 {assessment.id}
               </span>
-              <SeverityBadge severity={assessment.triageLevel} size="sm" />
+              <SeverityBadge severity={triage} size="sm" />
               <span className="text-xs text-slate-400">•</span>
               <span className="text-xs text-slate-500 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {assessment.createdAt}
+                {created}
               </span>
             </div>
 
@@ -48,7 +53,7 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
             </h4>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-              {assessment.aiSummary}
+              {summary}
             </p>
 
             {assessment.differentialDiagnoses && assessment.differentialDiagnoses.length > 0 && (
@@ -77,7 +82,7 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
             </div>
             <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>{assessment.consensusScore.toFixed(1)}%</span>
+              <span>{score.toFixed(1)}%</span>
             </div>
           </div>
 

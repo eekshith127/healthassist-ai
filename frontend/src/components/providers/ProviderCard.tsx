@@ -3,7 +3,6 @@ import {
   Star,
   Video,
   Calendar,
-  ShieldCheck,
   MapPin,
   Clock,
   Globe,
@@ -27,8 +26,10 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   onBookSuccess,
   className,
 }) => {
+  const slots = provider.nextSlots && provider.nextSlots.length > 0 ? provider.nextSlots : ['Today 2:00 PM', 'Tomorrow 10:00 AM']
+  const languages = provider.languages && provider.languages.length > 0 ? provider.languages : ['English']
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedSlot, setSelectedSlot] = useState(provider.nextSlots[0] || 'Today 2:00 PM')
+  const [selectedSlot, setSelectedSlot] = useState(slots[0])
   const [isBooked, setIsBooked] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
 
@@ -57,7 +58,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
           {/* Header: Avatar, Name, Badge */}
           <div className="flex items-start gap-3.5">
             <Avatar
-              initials={provider.initials}
+              initials={provider.initials || provider.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
               size="lg"
               status="verified"
               className="mt-0.5 shadow-md"
@@ -99,7 +100,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
             <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center gap-2">
               <Globe className="h-3.5 w-3.5 text-teal-500 shrink-0" />
               <span className="text-slate-600 dark:text-slate-300 text-[11px] truncate">
-                {provider.languages.join(', ')}
+                {languages.join(', ')}
               </span>
             </div>
           </div>
@@ -111,7 +112,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
               <span className="font-medium text-[11px]">{provider.availability}</span>
             </div>
             <span className="font-bold text-emerald-700 dark:text-emerald-400 text-xs">
-              {provider.telehealthFee}
+              {provider.telehealthFee || '$45 / Visit'}
             </span>
           </div>
 
@@ -134,7 +135,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         onClose={() => setIsModalOpen(false)}
         title={
           <div className="flex items-center gap-3">
-            <Avatar initials={provider.initials} size="sm" />
+            <Avatar initials={provider.initials || 'MD'} size="sm" />
             <div>
               <div className="text-base font-bold text-slate-900 dark:text-white">
                 Book Telehealth Consultation
@@ -179,7 +180,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
               Available Time Slots
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {provider.nextSlots.map((slot, idx) => (
+              {slots.map((slot, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -188,26 +189,13 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
                     'p-3 rounded-xl border text-xs font-semibold text-left transition-all',
                     selectedSlot === slot
                       ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/20'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <span>{slot}</span>
-                    {selectedSlot === slot && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                  </div>
+                  {slot}
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              <span>HIPAA Compliant Intake Hand-off</span>
-            </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Your latest AI triage assessment (ID: HA-2026-0818) and digital health profile will be securely attached to this appointment for clinical review prior to the call.
-            </p>
           </div>
         </div>
       </Modal>

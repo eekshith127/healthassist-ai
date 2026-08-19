@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "healthassist-default-dev-secret-key"
 
+    # Clerk Authentication
+    CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_JWKS_URL: str = "https://api.clerk.com/v1/jwks"
+    CLERK_ISSUER: str = ""
+
     # AI API Keys (Backend-only)
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""

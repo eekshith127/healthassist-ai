@@ -4,16 +4,11 @@ import {
   Menu,
   Stethoscope,
   Bell,
-  ChevronRight,
   HeartPulse,
-  LogOut,
-  User as UserIcon,
-  FileHeart,
 } from 'lucide-react'
+import { useUser, UserButton } from '@clerk/clerk-react'
 import { Button } from '../ui/button'
-import { Avatar } from '../ui/avatar'
 import { HealthStatusBadge } from './HealthStatusBadge'
-import { mockCurrentUser } from '../../services/mockData'
 import { cn } from '../../utils/cn'
 
 export interface NavbarProps {
@@ -23,7 +18,10 @@ export interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, className }) => {
   const [showNotifications, setShowNotifications] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
+  const { user } = useUser()
+
+  const displayName = user?.fullName || user?.firstName || 'Patient'
+  const displayEmail = user?.primaryEmailAddress?.emailAddress || 'Authenticated Patient'
 
   const notifications = [
     {
@@ -67,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, className }) =>
               <span>Triage</span>
             </Button>
           </Link>
-
+          <UserButton afterSignOutUrl="/login" />
           <button
             onClick={onToggleSidebar}
             className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -108,7 +106,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, className }) =>
             <button
               onClick={() => {
                 setShowNotifications(!showNotifications)
-                setShowUserMenu(false)
               }}
               className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 relative transition-colors"
               title="Notifications"
@@ -150,65 +147,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, className }) =>
 
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
 
-          {/* User Menu Trigger */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowUserMenu(!showUserMenu)
-                setShowNotifications(false)
+          {/* User Profile Button with Clerk */}
+          <div className="flex items-center gap-3">
+            <UserButton
+              afterSignOutUrl="/login"
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: 'h-8 w-8 rounded-full border border-emerald-500/30',
+                },
               }}
-              className="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
-            >
-              <Avatar initials="JD" size="sm" status="online" />
-              <div className="hidden lg:block">
-                <div className="text-xs font-semibold leading-tight text-slate-900 dark:text-white">
-                  {mockCurrentUser.fullName}
-                </div>
-                <div className="text-[10px] text-slate-500 font-mono">
-                  {mockCurrentUser.patientId}
-                </div>
+            />
+            <Link to="/profile" className="text-left hidden lg:block hover:opacity-80 transition-opacity">
+              <div className="text-xs font-semibold leading-tight text-slate-900 dark:text-white">
+                {displayName}
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-            </button>
-
-            {/* User Dropdown */}
-            {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150 text-xs">
-                <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-                  <p className="font-bold text-slate-900 dark:text-white">{mockCurrentUser.fullName}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{mockCurrentUser.email}</p>
-                </div>
-
-                <Link
-                  to="/profile"
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  <UserIcon className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>My Account</span>
-                </Link>
-
-                <Link
-                  to="/health-profile"
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  <FileHeart className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Health Profile</span>
-                </Link>
-
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
-                  <Link
-                    to="/login"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2 p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Sign Out</span>
-                  </Link>
-                </div>
+              <div className="text-[10px] text-slate-500 truncate max-w-[130px]">
+                {displayEmail}
               </div>
-            )}
+            </Link>
           </div>
         </div>
       </header>

@@ -1,3 +1,4 @@
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -7,8 +8,19 @@ from backend.app.schemas.health_profile import HealthProfileResponse
 client = TestClient(app)
 
 
+def create_test_auth_headers(sub: str = "user_test_profile_id"):
+    payload = {
+        "sub": sub,
+        "email": "test_profile@healthassist.care",
+        "name": "Test Profile User",
+    }
+    token = jwt.encode(payload, "secret", algorithm="HS256")
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_get_profile_endpoint():
-    response = client.get("/api/profile")
+    headers = create_test_auth_headers()
+    response = client.get("/api/profile", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert "id" in data
@@ -22,6 +34,7 @@ def test_get_profile_endpoint():
 
 
 def test_update_profile_endpoint():
+    headers = create_test_auth_headers()
     payload = {
         "date_of_birth": "1990-01-15",
         "sex": "female",
@@ -34,7 +47,7 @@ def test_update_profile_endpoint():
         "previous_surgeries": ["Tonsillectomy (2005)"],
         "family_history": ["Asthma"],
     }
-    response = client.put("/api/profile", json=payload)
+    response = client.put("/api/profile", json=payload, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["sex"] == "female"
@@ -117,8 +130,10 @@ def test_selective_clinical_context_privacy():
 
 
 def test_get_clinical_context_endpoint():
+    headers = create_test_auth_headers()
     response = client.get(
-        "/api/profile/clinical-context?chief_complaint=chest%20pressure"
+        "/api/profile/clinical-context?chief_complaint=chest%20pressure",
+        headers=headers,
     )
     assert response.status_code == 200
     data = response.json()

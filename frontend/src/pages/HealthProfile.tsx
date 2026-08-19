@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import {
   FileHeart,
   AlertTriangle,
@@ -15,6 +17,8 @@ import {
   Users,
   Eye,
   RefreshCw,
+  ArrowRight,
+  Heart,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -23,9 +27,12 @@ import { Select } from '../components/ui/select'
 import { HealthCard } from '../components/health/HealthCard'
 import { HealthProfile as HealthProfileType } from '../types'
 import { fetchHealthProfile, saveHealthProfile } from '../services/profileService'
+import { profileApi } from '../services/api'
 import { calculateBMI, calculateAge, formatHeight, formatWeight } from '../utils/bmi'
 
 export const HealthProfile: React.FC = () => {
+  const { getToken } = useAuth()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<HealthProfileType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -38,22 +45,22 @@ export const HealthProfile: React.FC = () => {
   const [heightCm, setHeightCm] = useState<number>(180)
   const [weightKg, setWeightKg] = useState<number>(75)
   const [bloodGroup, setBloodGroup] = useState('O+')
+  const [emergencyContact, setEmergencyContact] = useState('Sarah Doe (Spouse)')
+  const [emergencyPhone, setEmergencyPhone] = useState('+1 (555) 948-2940')
 
   // List States
   const [medicalConditions, setMedicalConditions] = useState<string[]>([])
   const [medications, setMedications] = useState<string[]>([])
-  const [allergies, setAllergies] = useState<string[]>([])
+  const [allergies, setAllergies] = useState<string[]>(['Penicillin'])
   const [previousSurgeries, setPreviousSurgeries] = useState<string[]>([])
   const [familyHistory, setFamilyHistory] = useState<string[]>([])
 
-  // Temp Inputs for Adding Items
+  // Temp Inputs
   const [newCondition, setNewCondition] = useState('')
   const [newMedication, setNewMedication] = useState('')
   const [newAllergy, setNewAllergy] = useState('')
   const [newSurgery, setNewSurgery] = useState('')
   const [newFamilyHistory, setNewFamilyHistory] = useState('')
-
-  // Validation States
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Load Profile
@@ -61,6 +68,7 @@ export const HealthProfile: React.FC = () => {
     async function loadData() {
       setIsLoading(true)
       try {
+        const token = await getToken()
         const data = await fetchHealthProfile()
         setProfile(data)
         if (data.dateOfBirth) setDob(data.dateOfBirth.split('T')[0])
@@ -73,6 +81,15 @@ export const HealthProfile: React.FC = () => {
         setAllergies(data.allergies || [])
         setPreviousSurgeries(data.previousSurgeries || [])
         setFamilyHistory(data.familyHistory || [])
+
+        // Also check if backend profile has additional emergency fields
+        if (token) {
+          const beProfile = await profileApi.getProfile(token)
+          if (beProfile) {
+            if (beProfile.emergency_contact) setEmergencyContact(beProfile.emergency_contact)
+            if (beProfile.emergency_phone) setEmergencyPhone(beProfile.emergency_phone)
+          }
+        }
       } catch (err) {
         console.error('Failed to load profile:', err)
       } finally {
@@ -80,13 +97,11 @@ export const HealthProfile: React.FC = () => {
       }
     }
     loadData()
-  }, [])
+  }, [getToken])
 
-  // Dynamic calculations
   const bmiResult = calculateBMI(heightCm, weightKg)
   const ageResult = calculateAge(dob)
 
-  // Current consolidated preview object
   const currentProfilePreview: HealthProfileType = {
     ...profile,
     dateOfBirth: dob,
@@ -105,7 +120,6 @@ export const HealthProfile: React.FC = () => {
     profileCompleted: Boolean(dob && sex && heightCm && weightKg && bloodGroup),
   }
 
-  // Add Item Handlers
   const handleAddCondition = () => {
     if (!newCondition.trim()) return
     setMedicalConditions([...medicalConditions, newCondition.trim()])
@@ -136,8 +150,7 @@ export const HealthProfile: React.FC = () => {
     setNewFamilyHistory('')
   }
 
-  // Validate & Save
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent, shouldRedirect = false) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
 
@@ -158,6 +171,9 @@ export const HealthProfile: React.FC = () => {
     setIsSaving(true)
 
     try {
+      const token = await getToken()
+
+      // Save via profileService
       const updated = await saveHealthProfile({
         dateOfBirth: dob,
         sex,
@@ -171,9 +187,30 @@ export const HealthProfile: React.FC = () => {
         familyHistory,
       })
 
+      // Also persist to backend API
+      if (token) {
+        await profileApi.updateProfile(
+          {
+            age: ageResult ?? undefined,
+            gender: sex,
+            blood_type: bloodGroup,
+            allergies: allergies.join(', '),
+            chronic_conditions: medicalConditions.join(', '),
+            current_medications: medications.join(', '),
+            emergency_contact: emergencyContact,
+            emergency_phone: emergencyPhone,
+          },
+          token
+        )
+      }
+
       setProfile(updated)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
+
+      if (shouldRedirect) {
+        navigate('/dashboard')
+      }
     } catch (err) {
       console.error('Save failed:', err)
     } finally {
@@ -206,35 +243,46 @@ export const HealthProfile: React.FC = () => {
           </p>
         </div>
 
-        {/* View Switcher Tabs (Desktop / Mobile) */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/60 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('editor')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'editor'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+        {/* View Switcher Tabs & Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+            <button
+              type="button"
+              onClick={() => setActiveTab('editor')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'editor'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Edit Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'preview'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Eye className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Health Card Preview</span>
+            </button>
+          </div>
+
+          <Button
+            onClick={(e) => handleSave(e, true)}
+            disabled={isSaving}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
           >
-            Edit Profile
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'preview'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Eye className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Health Card Preview</span>
-          </button>
+            <span>Save & Go to Dashboard</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
-      {/* Privacy-Conscious Notice Banner */}
+      {/* Privacy Notice Banner */}
       <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 flex items-start gap-3.5 shadow-xs">
         <div className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 mt-0.5">
           <Lock className="h-4 w-4" />
@@ -247,7 +295,7 @@ export const HealthProfile: React.FC = () => {
             </span>
           </div>
           <p className="text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed">
-            Your Health Profile serves as persistent baseline context so you don't need to re-type conditions during every consultation. In accordance with clinical privacy standards, your full raw profile is <strong>never broadcast to LLMs</strong>. Only specific contraindicating allergies and relevant conditions are filtered into a minimal <code className="font-mono bg-emerald-100 dark:bg-emerald-900/50 px-1 py-0.5 rounded">PatientCase</code>.
+            Your Health Profile serves as persistent baseline context so you don't need to re-type conditions during every consultation. In accordance with clinical privacy standards, your full raw profile is <strong>never broadcast to LLMs</strong>. Only specific contraindicating allergies and relevant conditions are filtered into a minimal Patient Case.
           </p>
         </div>
       </div>
@@ -275,7 +323,7 @@ export const HealthProfile: React.FC = () => {
           <HealthCard profile={currentProfilePreview} showActions={true} />
         </div>
       ) : (
-        <form onSubmit={handleSave} className="space-y-8">
+        <form onSubmit={(e) => handleSave(e, false)} className="space-y-8">
           {/* Section 1: Core Biometrics & Real-Time BMI */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Core Form Fields */}
@@ -380,6 +428,32 @@ export const HealthProfile: React.FC = () => {
                         { label: 'AB- (AB Negative)', value: 'AB-' },
                         { label: 'Unknown / Not Tested', value: 'UNKNOWN' },
                       ]}
+                    />
+                  </div>
+                </div>
+
+                {/* Emergency Contact fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Heart className="h-3.5 w-3.5 text-rose-600" />
+                      <span>Emergency Contact Name</span>
+                    </label>
+                    <Input
+                      value={emergencyContact}
+                      onChange={(e) => setEmergencyContact(e.target.value)}
+                      placeholder="e.g. Sarah Doe (Spouse)"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Emergency Phone
+                    </label>
+                    <Input
+                      value={emergencyPhone}
+                      onChange={(e) => setEmergencyPhone(e.target.value)}
+                      placeholder="+1 (555) 000-0000"
                     />
                   </div>
                 </div>
@@ -740,7 +814,7 @@ export const HealthProfile: React.FC = () => {
           </div>
 
           {/* Form Action Footer */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="text-xs text-slate-500 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
               <span>All updates persist securely to your electronic health database.</span>
@@ -748,7 +822,7 @@ export const HealthProfile: React.FC = () => {
 
             <Button
               type="submit"
-              isLoading={isSaving}
+              disabled={isSaving}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-6 shadow-md shadow-emerald-600/20"
             >
               <Save className="h-4 w-4" />
@@ -760,3 +834,5 @@ export const HealthProfile: React.FC = () => {
     </div>
   )
 }
+
+export default HealthProfile
