@@ -1,0 +1,45 @@
+import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MainLayout } from './layouts/MainLayout'
+import { AuthLayout } from './layouts/AuthLayout'
+import { Dashboard } from './pages/Dashboard'
+import { Assessment } from './pages/Assessment'
+import { HealthProfile } from './pages/HealthProfile'
+import { History } from './pages/History'
+import { HealthCard } from './pages/HealthCard'
+import { Providers } from './pages/Providers'
+import { Profile } from './pages/Profile'
+import { Login } from './pages/Login'
+import { Signup } from './pages/Signup'
+import { NotFound } from './pages/NotFound'
+
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Auth routes */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+        </Route>
+
+        {/* Protected / App routes */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/health-profile" element={<HealthProfile />} />
+          <Route path="/assessment" element={<Assessment />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/health-card" element={<HealthCard />} />
+          <Route path="/providers" element={<Providers />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
+
+        {/* Catch all */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App
