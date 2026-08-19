@@ -1,107 +1,119 @@
 import React, { useState } from 'react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
-import { Button } from '../components/ui/button'
+import {
+  UserCheck,
+  Search,
+  CheckCircle2,
+} from 'lucide-react'
+import { ProviderCard } from '../components/providers/ProviderCard'
 import { Input } from '../components/ui/input'
-import { Badge } from '../components/ui/badge'
-import { UserCheck, Search, Star, Video, Calendar, ShieldCheck, MapPin } from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { mockProviders } from '../services/mockData'
+import { HealthcareProvider } from '../types'
 
 export const Providers: React.FC = () => {
   const [search, setSearch] = useState('')
   const [selectedSpecialty, setSelectedSpecialty] = useState('All')
+  const [onlyAccepting, setOnlyAccepting] = useState(false)
+  const [successToast, setSuccessToast] = useState<{
+    provider: HealthcareProvider
+    slot: string
+  } | null>(null)
 
-  const providers = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Jenkins, MD',
-      specialty: 'Family Medicine & Tele-Triage',
-      hospital: 'Metro Health Telemedicine Network',
-      rating: 4.9,
-      reviewsCount: 142,
-      availability: 'Available Today (Next: 2:00 PM)',
-      initials: 'SJ',
-      accepting: true,
-    },
-    {
-      id: 2,
-      name: 'Dr. Marcus Chen, MD, FACC',
-      specialty: 'Cardiology Specialist',
-      hospital: 'Cardiovascular Care Associates',
-      rating: 4.95,
-      reviewsCount: 98,
-      availability: 'Tomorrow 10:00 AM',
-      initials: 'MC',
-      accepting: true,
-    },
-    {
-      id: 3,
-      name: 'Dr. Elena Rostova, MD',
-      specialty: 'Dermatology & Skin Telehealth',
-      hospital: 'Advanced Skin & Allergy Institute',
-      rating: 4.8,
-      reviewsCount: 76,
-      availability: 'Available Today (Next: 4:30 PM)',
-      initials: 'ER',
-      accepting: true,
-    },
-    {
-      id: 4,
-      name: 'Dr. David Kim, DO',
-      specialty: 'Neurology & Headache Clinic',
-      hospital: 'Neurological Sciences Telehealth Group',
-      rating: 4.85,
-      reviewsCount: 110,
-      availability: 'Friday 11:15 AM',
-      initials: 'DK',
-      accepting: false,
-    },
+  const specialties = [
+    'All',
+    'Family Medicine',
+    'Cardiology',
+    'Dermatology',
+    'Neurology',
+    'Pulmonology',
+    'Orthopedics',
   ]
 
-  const specialties = ['All', 'Family Medicine', 'Cardiology', 'Dermatology', 'Neurology']
-
-  const filteredProviders = providers.filter((p) => {
+  const filteredProviders = mockProviders.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.specialty.toLowerCase().includes(search.toLowerCase()) ||
       p.hospital.toLowerCase().includes(search.toLowerCase())
     const matchesSpecialty =
-      selectedSpecialty === 'All' || p.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase())
-    return matchesSearch && matchesSpecialty
+      selectedSpecialty === 'All' ||
+      p.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase())
+    const matchesAccepting = onlyAccepting ? p.acceptingNewPatients : true
+    return matchesSearch && matchesSpecialty && matchesAccepting
   })
 
+  const handleBookingSuccess = (provider: HealthcareProvider, slot: string) => {
+    setSuccessToast({ provider, slot })
+    setTimeout(() => setSuccessToast(null), 5000)
+  }
+
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl animate-in fade-in duration-300">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-emerald-700 text-white shadow-2xl flex items-center gap-3 border border-emerald-500 animate-in slide-in-from-top-4 duration-300">
+          <div className="p-2 rounded-xl bg-emerald-800">
+            <CheckCircle2 className="h-5 w-5 text-emerald-200" />
+          </div>
+          <div className="text-xs">
+            <div className="font-bold text-sm">Consultation Scheduled!</div>
+            <div>
+              {successToast.provider.name} • {successToast.slot}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <UserCheck className="h-6 w-6 text-emerald-600" />
-          <span>Connected Telehealth Providers</span>
+          <span>Connected Telehealth Clinicians</span>
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Browse verified board-certified clinicians ready for instant video consultations and AI triage follow-ups.
+          Browse verified board-certified clinicians available for live HD video consultations and seamless AI triage review.
         </p>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search provider by name, specialty, or clinic..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+      {/* Search & Filters */}
+      <div className="space-y-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search provider by name, specialty, or clinic..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 text-xs"
+            />
+          </div>
+
+          <button
+            onClick={() => setOnlyAccepting(!onlyAccepting)}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors flex items-center gap-2 shrink-0 ${
+              onlyAccepting
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                onlyAccepting ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            />
+            <span>Accepting New Patients Only</span>
+          </button>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {/* Specialty Filter Pills */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {specialties.map((spec) => (
             <button
               key={spec}
               onClick={() => setSelectedSpecialty(spec)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl whitespace-nowrap transition-colors ${
                 selectedSpecialty === spec
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {spec}
@@ -110,62 +122,37 @@ export const Providers: React.FC = () => {
         </div>
       </div>
 
-      {/* Provider List Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredProviders.map((doctor) => (
-          <Card key={doctor.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                    {doctor.initials}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">
-                      {doctor.name}
-                    </h3>
-                    <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {doctor.specialty}
-                    </div>
-                  </div>
-                </div>
-
-                <Badge variant={doctor.accepting ? 'default' : 'secondary'} className="text-[10px]">
-                  {doctor.accepting ? 'Accepting Patients' : 'Waitlist'}
-                </Badge>
-              </div>
-
-              <div className="space-y-1.5 text-xs text-slate-500 border-y py-3">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{doctor.hospital}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-amber-500 font-semibold">
-                    <Star className="h-3.5 w-3.5 fill-amber-400" />
-                    <span>{doctor.rating}</span>
-                    <span className="text-slate-400 font-normal">({doctor.reviewsCount} reviews)</span>
-                  </div>
-                  <div className="text-emerald-600 dark:text-emerald-400 font-medium">
-                    {doctor.availability}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs">
-                  <Video className="h-3.5 w-3.5" />
-                  <span>Book Tele-Consult</span>
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>View Schedule</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Providers Grid */}
+      {filteredProviders.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+          <UserCheck className="h-10 w-10 text-slate-300 mx-auto" />
+          <h3 className="font-bold text-slate-700 dark:text-slate-300">No Clinicians Found</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Try adjusting your search criteria or specialty filters to find available doctors.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearch('')
+              setSelectedSpecialty('All')
+              setOnlyAccepting(false)
+            }}
+          >
+            Reset All Filters
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredProviders.map((provider) => (
+            <ProviderCard
+              key={provider.id}
+              provider={provider}
+              onBookSuccess={handleBookingSuccess}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

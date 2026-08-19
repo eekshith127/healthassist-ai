@@ -1,3 +1,5 @@
+export type TriageSeverity = 'emergency' | 'urgent' | 'non-urgent' | 'self-care'
+
 export interface HealthStatus {
   status: string
   service?: string
@@ -12,26 +14,84 @@ export interface User {
   fullName: string
   role: 'patient' | 'doctor' | 'admin'
   avatarUrl?: string
+  patientId?: string
+  phone?: string
+  bloodType?: string
+  dateOfBirth?: string
+  allergiesCount?: number
+  activePrescriptionsCount?: number
 }
 
-export interface HealthMetric {
+export interface VitalMetric {
   id: string
   title: string
   value: string
   unit: string
   status: 'normal' | 'attention' | 'warning'
   change?: string
+  trend?: 'up' | 'down' | 'stable'
   updatedAt: string
+  iconName: string
+}
+
+export interface Medication {
+  id: string
+  name: string
+  dosage: string
+  frequency: string
+  prescribedBy: string
+  refillsRemaining: number
+  active: boolean
+}
+
+export interface Allergy {
+  id: string
+  substance: string
+  reaction: string
+  severity: 'mild' | 'moderate' | 'severe' | 'life-threatening'
 }
 
 export interface AssessmentRecord {
-  id: number
+  id: string
   symptoms: string
-  triageLevel: 'emergency' | 'urgent' | 'non-urgent' | 'self-care'
+  triageLevel: TriageSeverity
   aiSummary: string
+  differentialDiagnoses: Array<{
+    name: string
+    probability: number
+    description: string
+  }>
   consensusScore: number
-  createdAt: string
+  modelVotes: {
+    geminiMed: number
+    medPalm: number
+    clinicalGpt: number
+  }
+  recommendedAction: string
   recommendedSpecialist?: string
+  createdAt: string
+  status: 'active' | 'resolved' | 'escalated'
+  duration?: string
+  reportedPainScale?: number
+  emergencyRedFlags?: string[]
+  selfCareAdvice?: string[]
+}
+
+export interface ChatOption {
+  id: string
+  label: string
+  value: string
+}
+
+export interface ChatMessageItem {
+  id: string
+  sender: 'bot' | 'user' | 'system'
+  text: string
+  timestamp: string
+  options?: ChatOption[]
+  assessmentResult?: AssessmentRecord
+  isTyping?: boolean
+  consensusStatus?: string
 }
 
 export interface HealthcareProvider {
@@ -43,6 +103,22 @@ export interface HealthcareProvider {
   rating: number
   reviewsCount: number
   availability: string
-  imageUrl: string
+  experienceYears: number
+  imageUrl?: string
+  initials: string
   acceptingNewPatients: boolean
+  languages: string[]
+  telehealthFee: string
+  nextSlots: string[]
+}
+
+export interface UpcomingAppointment {
+  id: string
+  providerName: string
+  specialty: string
+  hospital: string
+  date: string
+  time: string
+  type: 'video' | 'in-person'
+  meetingLink?: string
 }

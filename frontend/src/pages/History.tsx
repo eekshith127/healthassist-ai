@@ -1,62 +1,67 @@
 import React, { useState } from 'react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
+import {
+  Clock,
+  Download,
+  Search,
+  FileText,
+  UserCheck,
+  Check,
+} from 'lucide-react'
+import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { Clock, Download, Stethoscope, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { Input } from '../components/ui/input'
+import { Modal } from '../components/ui/modal'
+import { AssessmentCard } from '../components/assessment/AssessmentCard'
+import { ResultCard } from '../components/assessment/ResultCard'
+import { mockAssessmentHistory } from '../services/mockData'
+import { AssessmentRecord } from '../types'
 
 export const History: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'triage' | 'consult'>('all')
+  const [search, setSearch] = useState('')
+  const [selectedRecord, setSelectedRecord] = useState<AssessmentRecord | null>(null)
+  const [downloadAllState, setDownloadAllState] = useState(false)
 
-  const historyItems = [
+  const handleDownloadAll = () => {
+    setDownloadAllState(true)
+    setTimeout(() => setDownloadAllState(false), 2000)
+  }
+
+  const consultRecords = [
     {
-      id: 'HA-2026-0818',
-      type: 'triage',
-      title: 'Seasonal Allergy & Mild Sinus Congestion',
-      date: 'Aug 18, 2026 • 09:14 AM',
-      triageLevel: 'Non-Urgent',
-      consensusScore: '98.4%',
-      status: 'Resolved',
-      doctor: 'Automated AI Consensus',
-    },
-    {
-      id: 'HA-2026-0814',
-      type: 'triage',
-      title: 'Post-Workout Muscular Spasm (Lumbar)',
-      date: 'Aug 14, 2026 • 06:45 PM',
-      triageLevel: 'Self-Care',
-      consensusScore: '96.2%',
-      status: 'Resolved',
-      doctor: 'Automated AI Consensus',
-    },
-    {
-      id: 'HA-2026-0722',
-      type: 'consult',
-      title: 'Routine Telehealth Health Review',
-      date: 'Jul 22, 2026 • 11:00 AM',
-      triageLevel: 'Routine Checkup',
-      consensusScore: 'N/A',
+      id: 'DOC-2026-0722',
+      type: 'consult' as const,
+      provider: 'Dr. Sarah Jenkins, MD',
+      specialty: 'Family Medicine & Tele-Triage',
+      date: 'Jul 22, 2026 • 11:00 AM EST',
       status: 'Completed',
-      doctor: 'Dr. Sarah Jenkins (Family Medicine)',
+      notes:
+        'Patient reviewed seasonal sinus congestion and allergy medications. Refill for Loratadine 10mg approved for 90 days.',
+      prescription: 'Loratadine 10mg Tablet (Daily)',
     },
     {
-      id: 'HA-2026-0610',
-      type: 'triage',
-      title: 'Mild Dermatitis / Skin Rash Evaluation',
-      date: 'Jun 10, 2026 • 02:30 PM',
-      triageLevel: 'Non-Urgent',
-      consensusScore: '94.8%',
+      id: 'DOC-2026-0610',
+      type: 'consult' as const,
+      provider: 'Dr. Elena Rostova, MD',
+      specialty: 'Dermatology Specialist',
+      date: 'Jun 10, 2026 • 02:30 PM EST',
       status: 'Completed',
-      doctor: 'Dr. Marcus Chen (Dermatology)',
+      notes:
+        'Evaluation of localized contact dermatitis on right forearm. Recommended topical 1% hydrocortisone cream and skin moisturization.',
+      prescription: 'Hydrocortisone 1% Topical Cream',
     },
   ]
 
-  const filteredItems = historyItems.filter((item) => {
-    if (filter === 'all') return true
-    return item.type === filter
+  const filteredAssessments = mockAssessmentHistory.filter((item) => {
+    const matchesSearch =
+      item.symptoms.toLowerCase().includes(search.toLowerCase()) ||
+      item.id.toLowerCase().includes(search.toLowerCase()) ||
+      item.aiSummary.toLowerCase().includes(search.toLowerCase())
+    return matchesSearch
   })
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -65,85 +70,151 @@ export const History: React.FC = () => {
             <span>Consultation & Assessment History</span>
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Complete archive of your AI triage evaluations, doctor consultations, and clinical summaries.
+            Complete archive of your AI triage evaluations, differential diagnoses, and telehealth doctor visits.
           </p>
         </div>
 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownloadAll}
+          className="gap-2 text-xs font-semibold self-start sm:self-auto"
+        >
+          {downloadAllState ? <Check className="h-4 w-4 text-emerald-600" /> : <Download className="h-4 w-4" />}
+          <span>{downloadAllState ? 'Export Complete' : 'Export Full Medical History'}</span>
+        </Button>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search history by symptom, report ID, diagnosis, or clinician..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 text-xs"
+          />
+        </div>
+
         {/* Filter Pills */}
-        <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border w-fit">
+        <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 w-full sm:w-auto shrink-0 justify-center">
           {(['all', 'triage', 'consult'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg capitalize transition-colors ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-colors ${
                 filter === tab
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              {tab === 'all' ? 'All Records' : tab === 'triage' ? 'AI Triage' : 'Doctor Consults'}
+              {tab === 'all' ? 'All Records' : tab === 'triage' ? 'AI Triage Reports' : 'Doctor Consults'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* History Timeline Cards */}
-      <div className="space-y-3">
-        {filteredItems.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div
-                  className={`p-2.5 rounded-xl shrink-0 mt-0.5 ${
-                    item.type === 'triage'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                      : 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300'
-                  }`}
-                >
-                  <Stethoscope className="h-5 w-5" />
-                </div>
+      {/* History Items Container */}
+      <div className="space-y-4">
+        {/* AI Triage Reports */}
+        {(filter === 'all' || filter === 'triage') && (
+          <div className="space-y-3">
+            {filter === 'all' && (
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                AI Clinical Consensus Triage Records ({filteredAssessments.length})
+              </h3>
+            )}
+            {filteredAssessments.map((item) => (
+              <AssessmentCard
+                key={item.id}
+                assessment={item}
+                onViewDetails={(rec) => setSelectedRecord(rec)}
+              />
+            ))}
+          </div>
+        )}
 
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      {item.title}
-                    </h3>
-                    <Badge variant={item.triageLevel === 'Emergency' ? 'destructive' : 'default'} className="text-[10px]">
-                      {item.triageLevel}
-                    </Badge>
+        {/* Doctor Consultations */}
+        {(filter === 'all' || filter === 'consult') && (
+          <div className="space-y-3 pt-2">
+            {filter === 'all' && (
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Verified Telehealth Doctor Visits ({consultRecords.length})
+              </h3>
+            )}
+            {consultRecords.map((consult) => (
+              <Card key={consult.id} className="hover:border-emerald-300 dark:hover:border-emerald-700 transition-all shadow-xs">
+                <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                    <div className="p-2.5 rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 shrink-0 mt-0.5">
+                      <UserCheck className="h-5 w-5" />
+                    </div>
+
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-semibold text-slate-500">
+                          {consult.id}
+                        </span>
+                        <span className="px-2 py-0.2 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 text-[10px] font-bold">
+                          Doctor Consultation
+                        </span>
+                        <span className="text-xs text-slate-400">•</span>
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {consult.date}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                        {consult.provider} — {consult.specialty}
+                      </h4>
+
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {consult.notes}
+                      </p>
+
+                      <div className="pt-1 flex items-center gap-2 text-xs">
+                        <span className="text-slate-400">Prescription:</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          {consult.prescription}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>{item.date}</span>
-                    <span>•</span>
-                    <span className="font-mono text-[11px]">{item.id}</span>
-                    <span>•</span>
-                    <span>Provider: <strong>{item.doctor}</strong></span>
+                  <div className="flex items-center gap-2 shrink-0 border-t md:border-t-0 pt-2 md:pt-0">
+                    <Button variant="outline" size="sm" className="gap-1 text-xs">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Clinical Note</span>
+                    </Button>
                   </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 self-end md:self-center">
-                {item.consensusScore !== 'N/A' && (
-                  <div className="text-right hidden sm:block">
-                    <div className="text-[10px] text-slate-400 font-medium">Consensus</div>
-                    <div className="text-xs font-bold text-emerald-600">{item.consensusScore}</div>
-                  </div>
-                )}
-
-                <Button variant="outline" size="sm" className="gap-1 text-xs">
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Report</span>
-                </Button>
-
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Clinical Assessment Detail Modal */}
+      {selectedRecord && (
+        <Modal
+          isOpen={!!selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+          title="Clinical Triage Comprehensive Report"
+          size="xl"
+          footer={
+            <Button variant="outline" size="sm" onClick={() => setSelectedRecord(null)}>
+              Close
+            </Button>
+          }
+        >
+          <ResultCard
+            result={selectedRecord}
+            onBookSpecialist={() => setSelectedRecord(null)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

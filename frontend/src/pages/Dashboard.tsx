@@ -1,89 +1,77 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Stethoscope,
   CreditCard,
-  UserCheck,
   Heart,
   Activity,
   Droplets,
   Moon,
-  ArrowUpRight,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
+  Zap,
+  Thermometer,
+  Calendar,
   Clock,
   Sparkles,
-  Server,
+  ChevronRight,
+  Video,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { useHealthCheck } from '../hooks/useHealthCheck'
+import { AssessmentCard } from '../components/assessment/AssessmentCard'
+import { HealthCard } from '../components/health/HealthCard'
+import { Modal } from '../components/ui/modal'
+import { ResultCard } from '../components/assessment/ResultCard'
+import {
+  mockCurrentUser,
+  mockVitals,
+  mockAssessmentHistory,
+  mockAppointments,
+} from '../services/mockData'
+import { AssessmentRecord } from '../types'
 
 export const Dashboard: React.FC = () => {
-  const { health, isLoading, isError, errorMessage } = useHealthCheck(10000)
+  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null)
 
-  const quickStats = [
-    {
-      title: 'Resting Heart Rate',
-      value: '72',
-      unit: 'bpm',
-      status: 'Normal range',
-      icon: Heart,
-      color: 'text-rose-500',
-      bgColor: 'bg-rose-50 dark:bg-rose-950/40',
-    },
-    {
-      title: 'Blood Pressure',
-      value: '120/80',
-      unit: 'mmHg',
-      status: 'Optimal',
-      icon: Activity,
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-950/40',
-    },
-    {
-      title: 'Blood Oxygen (SpO2)',
-      value: '98',
-      unit: '%',
-      status: 'Healthy',
-      icon: Droplets,
-      color: 'text-cyan-500',
-      bgColor: 'bg-cyan-50 dark:bg-cyan-950/40',
-    },
-    {
-      title: 'Sleep Duration',
-      value: '7.8',
-      unit: 'hrs',
-      status: '+45m vs avg',
-      icon: Moon,
-      color: 'text-indigo-500',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-950/40',
-    },
-  ]
+  const getVitalIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Heart':
+        return <Heart className="h-5 w-5 text-rose-500" />
+      case 'Activity':
+        return <Activity className="h-5 w-5 text-emerald-500" />
+      case 'Droplets':
+        return <Droplets className="h-5 w-5 text-cyan-500" />
+      case 'Moon':
+        return <Moon className="h-5 w-5 text-indigo-500" />
+      case 'Zap':
+        return <Zap className="h-5 w-5 text-amber-500" />
+      case 'Thermometer':
+        return <Thermometer className="h-5 w-5 text-orange-500" />
+      default:
+        return <Activity className="h-5 w-5 text-emerald-500" />
+    }
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-300">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-6 md:p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-950 p-6 md:p-8 text-white shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-semibold backdrop-blur-md border border-emerald-400/30">
               <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-              <span>AI-Assisted Telemedicine Active</span>
+              <span>Multi-LLM Clinical Consensus Protocol Active</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Hello, John Doe 👋
+              Hello, {mockCurrentUser.fullName} 👋
             </h1>
             <p className="text-emerald-100/90 text-sm leading-relaxed">
-              Your health vitals are stable. How are you feeling today? You can start a clinical AI assessment or review your medical summary anytime.
+              Your biometric health vitals are stable. How are you feeling today? You can launch an instant AI triage assessment or connect with a board-certified physician.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Link to="/assessment">
-              <Button size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50 shadow-md font-semibold gap-2">
+              <Button size="lg" className="bg-white text-emerald-950 hover:bg-emerald-50 shadow-md font-semibold gap-2">
                 <Stethoscope className="h-5 w-5 text-emerald-700" />
                 <span>Start AI Triage</span>
               </Button>
@@ -91,268 +79,205 @@ export const Dashboard: React.FC = () => {
             <Link to="/health-card">
               <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm gap-2">
                 <CreditCard className="h-5 w-5" />
-                <span>Health Card</span>
+                <span>Emergency ID</span>
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Decorative backdrop elements */}
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+        {/* Decorative backdrop glow */}
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none" />
+        <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-teal-400/15 blur-3xl pointer-events-none" />
       </div>
 
-      {/* Backend Integration Live Status Card */}
-      <Card className="border-emerald-200/80 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20 shadow-sm">
-        <CardContent className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${
-              isLoading
-                ? 'bg-slate-100 text-slate-500'
-                : isError
-                ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'
-                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-            }`}>
-              <Server className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm text-slate-900 dark:text-white">
-                  FastAPI Backend Health Status
-                </h2>
-                {isLoading ? (
-                  <Badge variant="secondary">Connecting...</Badge>
-                ) : isError ? (
-                  <Badge variant="destructive">Disconnected</Badge>
-                ) : (
-                  <Badge className="bg-emerald-600 hover:bg-emerald-600">Connected (status: ok)</Badge>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {isLoading && 'Testing communication with endpoint GET /api/health...'}
-                {isError && `Failed to reach backend: ${errorMessage}. Ensure FastAPI server is running.`}
-                {!isLoading && !isError && health && (
-                  <span>
-                    Endpoint <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-[11px]">/api/health</code> operational • Database: <span className="font-semibold capitalize text-emerald-600">{health.database || 'connected'}</span> • Service: {health.service}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-mono bg-white dark:bg-slate-800 px-2.5 py-1 rounded-md border text-[11px]">
-              GET /api/health
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Vitals Summary Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
+      {/* Vital Metrics Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Activity className="h-5 w-5 text-emerald-600" />
-            <span>Real-time Health Indicators</span>
+            <span>Real-time Biometrics & Vitals</span>
           </h2>
-          <Link to="/health-profile" className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
-            <span>Manage Profile</span>
-            <ArrowUpRight className="h-3.5 w-3.5" />
+          <Link
+            to="/health-profile"
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+          >
+            <span>Update Vitals</span>
+            <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickStats.map((stat, i) => {
-            const Icon = stat.icon
-            return (
-              <Card key={i} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">{stat.title}</span>
-                    <div className={`p-2 rounded-lg ${stat.bgColor} ${stat.color}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                      {stat.value}
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">{stat.unit}</span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>{stat.status}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          {mockVitals.map((vital) => (
+            <div
+              key={vital.id}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                  {getVitalIcon(vital.iconName)}
+                </div>
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  {vital.status}
+                </span>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-medium text-slate-500 truncate">
+                  {vital.title}
+                </div>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {vital.value}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">{vital.unit}</span>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-slate-500 truncate pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                {vital.change}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Main Two-Column Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 cols) */}
+      {/* Main 2-Column Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left 2 Columns: Recent Triage Records & Upcoming Appointments */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Quick Actions Panel */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Telemedicine Quick Actions</CardTitle>
-              <CardDescription>Direct navigation to core clinical workflows</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Link
-                to="/assessment"
-                className="group p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all text-left"
-              >
-                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-lg w-fit mb-3 group-hover:scale-105 transition-transform">
-                  <Stethoscope className="h-5 w-5" />
+          {/* Upcoming Video Consultation */}
+          {mockAppointments.length > 0 && (
+            <Card className="border-emerald-200/80 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/20 dark:from-emerald-950/20 dark:via-slate-900 dark:to-teal-950/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Upcoming Telehealth Consultation</CardTitle>
+                      <CardDescription>Verified clinician handoff with attached triage log</CardDescription>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-xs font-bold">
+                    Confirmed
+                  </span>
                 </div>
-                <div className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">
-                  New AI Assessment
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Intelligent symptom check with multi-LLM consensus verification.
-                </p>
-              </Link>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      {mockAppointments[0].providerName}
+                    </h4>
+                    <p className="text-xs text-emerald-600 font-semibold">
+                      {mockAppointments[0].specialty} • {mockAppointments[0].hospital}
+                    </p>
+                    <p className="text-xs text-slate-500 flex items-center gap-2 pt-0.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{mockAppointments[0].date} at {mockAppointments[0].time}</span>
+                    </p>
+                  </div>
 
-              <Link
-                to="/providers"
-                className="group p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/20 transition-all text-left"
-              >
-                <div className="p-2.5 bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 rounded-lg w-fit mb-3 group-hover:scale-105 transition-transform">
-                  <UserCheck className="h-5 w-5" />
+                  <a
+                    href={mockAppointments[0].meetingLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0"
+                  >
+                    <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                      <Video className="h-4 w-4" />
+                      <span>Join HD Video Room</span>
+                    </Button>
+                  </a>
                 </div>
-                <div className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-teal-600">
-                  Find Doctor
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Connect with licensed telehealth specialists and clinics.
-                </p>
-              </Link>
+              </CardContent>
+            </Card>
+          )}
 
+          {/* Recent AI Triage History */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Clock className="h-5 w-5 text-emerald-600" />
+                <span>Recent AI Symptom Triage Reports</span>
+              </h2>
+              <Link
+                to="/history"
+                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              >
+                <span>View All Records</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {mockAssessmentHistory.map((rec) => (
+                <AssessmentCard
+                  key={rec.id}
+                  assessment={rec}
+                  onViewDetails={(rec) => setSelectedAssessment(rec)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right 1 Column: Digital Emergency Card & Safety Guarantee */}
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                Digital Emergency ID Card
+              </h3>
               <Link
                 to="/health-card"
-                className="group p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all text-left"
+                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
               >
-                <div className="p-2.5 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-lg w-fit mb-3 group-hover:scale-105 transition-transform">
-                  <CreditCard className="h-5 w-5" />
-                </div>
-                <div className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-indigo-600">
-                  Emergency Card
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Access digital emergency QR ID, allergies, and blood group.
-                </p>
+                View Wallet PDF
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+            <HealthCard showActions={false} />
+          </div>
 
-          {/* Recent Consultation History Snapshot */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Recent Triage History</CardTitle>
-                <CardDescription>Summary of recent symptom evaluations</CardDescription>
-              </div>
-              <Link to="/history">
-                <Button variant="ghost" size="sm" className="text-xs text-emerald-600">
-                  View all
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
-                      Mild Seasonal Allergy Triage
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Evaluated on Aug 18, 2026 • Non-urgent care recommended
-                    </div>
-                  </div>
-                </div>
-                <Badge variant="default" className="text-[10px]">98% Consensus</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300 rounded-lg">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
-                      Post-Exercise Muscular Strain
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Evaluated on Aug 14, 2026 • Self-care protocol completed
-                    </div>
-                  </div>
-                </div>
-                <Badge variant="secondary" className="text-[10px]">Resolved</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column (1 col) */}
-        <div className="space-y-6">
-          {/* Upcoming Telehealth Appointment */}
-          <Card className="border-teal-200/80 dark:border-teal-900/50 bg-gradient-to-b from-teal-50/40 to-transparent">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Upcoming Tele-Consult</CardTitle>
-                <Badge variant="warning">Tomorrow</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
-                  SJ
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">Dr. Sarah Jenkins</div>
-                  <div className="text-[11px] text-slate-500">Family Medicine • 10:30 AM EST</div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border text-xs text-slate-600 dark:text-slate-300 space-y-1">
-                <div className="font-semibold text-[11px] text-slate-500">Meeting Link</div>
-                <div className="text-emerald-600 font-mono text-[11px] truncate">https://healthassist.care/tele/v-8492</div>
-              </div>
-
-              <Link to="/providers" className="block">
-                <Button variant="outline" className="w-full text-xs">
-                  Manage Appointments
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Clinical Architecture Safety Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>Safety & Consensus Guard</span>
+          {/* Safety & Protocol Box */}
+          <Card className="bg-slate-50 dark:bg-slate-900 border-slate-200/80 dark:border-slate-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">
+                <span>HIPAA & Clinical Safety Guarantee</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-slate-600 dark:text-slate-300 space-y-2 leading-relaxed">
+            <CardContent className="space-y-3 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               <p>
-                HealthAssist employs a multi-tiered verification pipeline:
+                Every symptom triage analysis runs through our proprietary multi-model safety layer to eliminate medical hallucinations and flag life-threatening red flags immediately.
               </p>
-              <ul className="list-disc pl-4 space-y-1 text-slate-500">
-                <li>Real-time red-flag clinical emergency screening</li>
-                <li>Multi-LLM agreement consensus scoring</li>
-                <li>Seamless direct handoff to licensed physicians</li>
-              </ul>
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300">
+                🔒 Encrypted end-to-end telemetry. Your health data is never shared with third-party advertising networks.
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Assessment Details Modal */}
+      {selectedAssessment && (
+        <Modal
+          isOpen={!!selectedAssessment}
+          onClose={() => setSelectedAssessment(null)}
+          title="Clinical Triage Details"
+          size="xl"
+          footer={
+            <Button variant="outline" size="sm" onClick={() => setSelectedAssessment(null)}>
+              Close
+            </Button>
+          }
+        >
+          <ResultCard
+            result={selectedAssessment}
+            onBookSpecialist={() => setSelectedAssessment(null)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }
