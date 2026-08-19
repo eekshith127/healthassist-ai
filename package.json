@@ -2,11 +2,17 @@
   "name": "healthassist-monorepo",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "AI-Powered Telemedicine Assistance System",
   "scripts": {
+    "dev": "concurrently --kill-others --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "node scripts/run-backend.js",
     "dev:frontend": "npm run dev --prefix frontend",
-    "build:frontend": "npm run build --prefix frontend",
     "build": "npm run build --prefix frontend",
-    "preview:frontend": "npm run preview --prefix frontend"
+    "build:frontend": "npm run build --prefix frontend",
+    "test:backend": "node scripts/test-backend.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
