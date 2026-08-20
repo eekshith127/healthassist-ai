@@ -6,11 +6,14 @@ from backend.app.schemas.profile import (
     HealthProfileUpdate,
     HealthProfileRead,
 )
-from backend.app.schemas.assessment import AssessmentCreate, AssessmentRead
+from backend.app.schemas.assessment import (
+    AssessmentCreate,
+    AssessmentRead,
+    AssessmentMessageRequest,
+    AssessmentMessageResponse,
+    ChatOptionSchema,
+)
 from backend.app.schemas.health_profile import (
-    HealthProfileBase,
-    HealthProfileCreate,
-    HealthProfileUpdate,
     HealthProfileResponse,
     PatientCaseContext,
 )
@@ -25,9 +28,10 @@ __all__ = [
     "HealthProfileRead",
     "AssessmentCreate",
     "AssessmentRead",
-    "HealthProfileBase",
-    "HealthProfileCreate",
-    "HealthProfileUpdate",
+    "AssessmentMessageRequest",
+    "AssessmentMessageResponse",
+    "ChatOptionSchema",
     "HealthProfileResponse",
     "PatientCaseContext",
 ]
+

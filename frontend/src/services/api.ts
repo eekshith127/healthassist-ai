@@ -5,6 +5,8 @@ import type {
   HealthProfileData,
   AssessmentRecord,
   AssessmentCreatePayload,
+  AssessmentMessagePayload,
+  AssessmentMessageResponse,
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -66,6 +68,19 @@ export const assessmentApi = {
     const response = await apiClient.post<AssessmentRecord>('/assessments', data, authHeaders(token))
     return response.data
   },
+  sendAssessmentMessage: async (
+    assessmentId: string | number,
+    payload: AssessmentMessagePayload,
+    token?: string | null
+  ): Promise<AssessmentMessageResponse> => {
+    const response = await apiClient.post<AssessmentMessageResponse>(
+      `/assessments/${assessmentId}/messages`,
+      payload,
+      authHeaders(token)
+    )
+    return response.data
+  },
 }
 
 export default apiClient
+

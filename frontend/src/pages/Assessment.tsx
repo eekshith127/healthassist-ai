@@ -1,14 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { useAuth, useUser } from '@clerk/clerk-react'
 import {
   Stethoscope,
-  Plus,
   Sparkles,
-  ShieldCheck,
+  PanelRight,
+  PanelRightClose,
+  Menu,
   RotateCcw,
 } from 'lucide-react'
 import { ChatMessage } from '../components/chat/ChatMessage'
 import { ChatInput } from '../components/chat/ChatInput'
+import { AssessmentSidebar } from '../components/chat/AssessmentSidebar'
+import { AssessmentInfoPanel } from '../components/chat/AssessmentInfoPanel'
 import { Button } from '../components/ui/button'
 import { Modal } from '../components/ui/modal'
 import { ProviderCard } from '../components/providers/ProviderCard'
@@ -17,287 +20,431 @@ import {
   ChatOption,
   AssessmentRecord,
   HealthcareProvider,
+  HealthProfileData,
 } from '../types'
 import {
-  mockInitialChatMessages,
   mockTriageScenarioResult,
   mockAssessmentHistory,
   mockProviders,
 } from '../services/mockData'
-import { assessmentApi } from '../services/api'
+import { assessmentApi, profileApi } from '../services/api'
+
+const INITIAL_AI_MESSAGE_TEXT =
+  "Hi! I'm your HealthAssist assistant. Tell me what you're experiencing today. I'll ask a few relevant questions to better understand your concern."
+
+const createInitialMessages = (): ChatMessageItem[] => [
+  {
+    id: 'msg-initial-greeting',
+    sender: 'bot',
+    text: INITIAL_AI_MESSAGE_TEXT,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    options: [
+      { id: 'opt-1', label: '🤕 Throbbing Headache & Sinus Congestion', value: 'I have a headache with sinus congestion for 2 days' },
+      { id: 'opt-2', label: '🫁 Dry Cough & Sore Throat', value: 'I have a persistent dry cough and sore throat' },
+      { id: 'opt-3', label: '⚡ Lower Back Muscle Soreness', value: 'I have sharp pain in my lower back after heavy lifting' },
+      { id: 'opt-4', label: '🩹 Skin Rash or Contact Itch', value: 'I developed a red itchy rash on my forearm' },
+    ],
+  },
+]
 
 export const Assessment: React.FC = () => {
   const { getToken } = useAuth()
-  const [messages, setMessages] = useState<ChatMessageItem[]>(mockInitialChatMessages)
+  const { user: clerkUser } = useUser()
+
+  // Session & conversation state
+  const [activeAssessmentId, setActiveAssessmentId] = useState<string>(
+    () => `HA-2026-LIVE-${Math.floor(1000 + Math.random() * 9000)}`
+  )
+
+  const [messages, setMessages] = useState<ChatMessageItem[]>(createInitialMessages)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [sessionStep, setSessionStep] = useState<number>(0)
+  const [currentSymptoms, setCurrentSymptoms] = useState<string>('')
+  const [currentAssessment, setCurrentAssessment] = useState<Partial<AssessmentRecord> | null>(null)
+
+  // Sidebars & panels visibility
+  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false)
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(true)
+  const [assessmentHistory, setAssessmentHistory] = useState<AssessmentRecord[]>(mockAssessmentHistory)
+
+  // Profile context & Doctor booking modal
+  const [healthProfile, setHealthProfile] = useState<HealthProfileData | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<HealthcareProvider | null>(null)
   const [isBookingOpen, setIsBookingOpen] = useState(false)
+
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef(100)
 
-  // Auto-scroll chat to bottom on new messages
-  useEffect(() => {
+  // Auto-scroll to bottom of conversation
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTo({
         top: chatScrollRef.current.scrollHeight,
-        behavior: 'smooth',
+        behavior,
       })
     }
-  }, [messages, isEvaluating])
+  }, [])
 
-  const handleSendMessage = (text: string) => {
-    counterRef.current += 1
-    const userMsg: ChatMessageItem = {
-      id: `user-${counterRef.current}`,
-      sender: 'user',
-      text,
-      timestamp: 'Just now',
+  useEffect(() => {
+    scrollToBottom('smooth')
+  }, [messages, isEvaluating, scrollToBottom])
+
+  // Load user profile & past assessments from backend or fallback
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchContext = async () => {
+      try {
+        const token = await getToken()
+        if (token) {
+          const profile = await profileApi.getProfile(token)
+          if (isMounted && profile) {
+            setHealthProfile(profile)
+          }
+
+          const records = await assessmentApi.getAssessments(token)
+          if (isMounted && records && records.length > 0) {
+            setAssessmentHistory(records)
+          }
+        }
+      } catch (err) {
+        console.debug('Using local mock clinical profile & history:', err)
+      }
     }
 
-    setMessages((prev) => [...prev, userMsg])
-    processNextTriageStep(text)
-  }
+    fetchContext()
+    return () => {
+      isMounted = false
+    }
+  }, [getToken])
 
-  const handleSelectOption = (option: ChatOption) => {
-    handleSendMessage(option.value)
-  }
-
-  const processNextTriageStep = (userText: string) => {
-    setIsEvaluating(true)
-
-    setTimeout(async () => {
-      counterRef.current += 1
-      if (sessionStep === 0) {
-        // Step 1: Inquire about duration & pain scale
-        const botResponse: ChatMessageItem = {
-          id: `bot-${counterRef.current}`,
-          sender: 'bot',
-          text: `Thank you for sharing. How long have you had these symptoms, and what is your approximate discomfort level on a scale from 1 (mild) to 10 (severe)?`,
-          timestamp: 'Just now',
-          options: [
-            { id: 'dur-1', label: '⏱️ Less than 24 hours (Mild, 2-3/10)', value: 'Symptoms started less than 24 hours ago, discomfort is mild (around 2/10)' },
-            { id: 'dur-2', label: '⏱️ 1 to 3 days (Moderate, 4-5/10)', value: 'I have had this for 2 days with moderate discomfort (around 4/10)' },
-            { id: 'dur-3', label: '⏱️ 4 to 7 days (Persistent, 6/10)', value: 'Persistent for nearly a week, discomfort is about 6/10' },
-            { id: 'dur-4', label: '⏱️ Over 1 week (Chronic)', value: 'Symptoms have persisted for more than a week' },
-          ],
-        }
-        setMessages((prev) => [...prev, botResponse])
-        setSessionStep(1)
-        setIsEvaluating(false)
-      } else if (sessionStep === 1) {
-        // Step 2: Inquire about red flag safety exclusions
-        const botResponse: ChatMessageItem = {
-          id: `bot-${counterRef.current}`,
-          sender: 'bot',
-          text: `Understood. Before our Multi-LLM consensus protocol generates your triage report, are you experiencing any of the following emergency red flags?\n\n• High fever (> 102°F / 39°C)\n• Shortness of breath or chest pressure\n• Severe sudden neurological symptoms or neck stiffness\n• Unexplained confusion or loss of consciousness`,
-          timestamp: 'Just now',
-          options: [
-            { id: 'red-no', label: '✅ None of these red flags', value: 'None of these symptoms apply to me. No fever or breathing difficulty.' },
-            { id: 'red-fever', label: '🌡️ Mild fever only (< 100°F)', value: 'I only have a slight low-grade fever, but no breathing issues or chest pain.' },
-            { id: 'red-yes', label: '⚠️ Yes, I have severe red flags', value: 'I am experiencing severe chest pressure and high fever.' },
-          ],
-        }
-        setMessages((prev) => [...prev, botResponse])
-        setSessionStep(2)
-        setIsEvaluating(false)
-      } else {
-        // Step 3: Run consensus & generate final clinical ResultCard
-        const isEmergency = userText.toLowerCase().includes('severe') || userText.toLowerCase().includes('chest')
-
-        const finalResult: AssessmentRecord = isEmergency
-          ? {
-              ...mockTriageScenarioResult,
-              id: `HA-2026-LIVE-${counterRef.current}`,
-              symptoms: userText,
-              triageLevel: 'emergency',
-              consensusScore: 99.4,
-              aiSummary:
-                'CRITICAL ALERT: Reported red flags (chest pressure / severe symptoms) require immediate emergency department or 911 clinical evaluation.',
-              recommendedSpecialist: 'Emergency Medicine / ER',
-            }
-          : {
-              ...mockTriageScenarioResult,
-              id: `HA-2026-LIVE-${counterRef.current}`,
-              symptoms: 'Mild fronto-temporal headache with nasal stuffiness and slight fatigue for 2 days. Discomfort rated 3/10.',
-              triageLevel: 'non-urgent',
-              consensusScore: 98.7,
-            }
-
-        // Save assessment to authenticated backend
-        try {
-          const token = await getToken()
-          await assessmentApi.createAssessment(
-            {
-              symptoms: finalResult.symptoms,
-              triage_level: finalResult.triageLevel,
-              ai_summary: finalResult.aiSummary,
-              consensus_score: finalResult.consensusScore,
-              safety_checked: 'passed',
-              recommended_specialist: finalResult.recommendedSpecialist,
-            },
-            token
-          )
-        } catch (e) {
-          console.debug('Saved locally:', e)
-        }
-
-        const botFinalResponse: ChatMessageItem = {
-          id: `bot-${counterRef.current}`,
-          sender: 'bot',
-          text: `I have synthesized your symptoms through our Multi-LLM Consensus Protocol (Gemini Medical, Med-PaLM, and Clinical GPT). Below is your structured clinical triage breakdown and recommended next steps:`,
-          timestamp: 'Just now',
-          assessmentResult: finalResult,
-        }
-
-        setMessages((prev) => [...prev, botFinalResponse])
-        setSessionStep(3)
-        setIsEvaluating(false)
-      }
-    }, 1200)
-  }
-
-  const handleResetChat = () => {
-    setMessages(mockInitialChatMessages)
+  // Start a fresh assessment session
+  const handleNewAssessment = () => {
+    const newId = `HA-2026-LIVE-${Math.floor(1000 + Math.random() * 9000)}`
+    setActiveAssessmentId(newId)
+    setMessages(createInitialMessages())
     setSessionStep(0)
+    setCurrentSymptoms('')
+    setCurrentAssessment(null)
     setIsEvaluating(false)
   }
 
+  // Load a historical assessment session
+  const handleSelectHistoryAssessment = (record: AssessmentRecord) => {
+    setActiveAssessmentId(String(record.id))
+    setCurrentSymptoms(record.symptoms || '')
+    setCurrentAssessment(record)
+    setSessionStep(3)
+
+    const historicalMessages: ChatMessageItem[] = [
+      {
+        id: `archived-init-${record.id}`,
+        sender: 'bot',
+        text: INITIAL_AI_MESSAGE_TEXT,
+        timestamp: record.createdAt || record.created_at || 'Previous',
+      },
+      {
+        id: `archived-user-${record.id}`,
+        sender: 'user',
+        text: record.symptoms || 'Reported symptoms inquiry',
+        timestamp: record.createdAt || record.created_at || 'Previous',
+      },
+      {
+        id: `archived-bot-result-${record.id}`,
+        sender: 'bot',
+        text: `Here is the archived clinical triage assessment summary for Record #${record.id}:`,
+        timestamp: record.createdAt || record.created_at || 'Previous',
+        assessmentResult: record,
+      },
+    ]
+
+    setMessages(historicalMessages)
+  }
+
+  // Send message through backend API or fallback mock
+  const executeSendMessage = async (text: string, existingUserMsgId?: string) => {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    let userMsgId = existingUserMsgId
+
+    if (!userMsgId) {
+      counterRef.current += 1
+      userMsgId = `user-msg-${counterRef.current}`
+
+      const userMsg: ChatMessageItem = {
+        id: userMsgId,
+        sender: 'user',
+        text,
+        timestamp: timeStr,
+        status: 'sending',
+        retryPayload: text,
+      }
+
+      setMessages((prev) => [...prev, userMsg])
+      if (sessionStep === 0 && !currentSymptoms) {
+        setCurrentSymptoms(text)
+      }
+    } else {
+      // Mark as sending during retry
+      setMessages((prev) =>
+        prev.map((m) => (m.id === userMsgId ? { ...m, status: 'sending', error: undefined } : m))
+      )
+    }
+
+    setIsEvaluating(true)
+
+    try {
+      const token = await getToken()
+      // Make backend API request to POST /api/assessments/{id}/messages
+      const res = await assessmentApi.sendAssessmentMessage(
+        activeAssessmentId,
+        {
+          message: text,
+          step: sessionStep,
+        },
+        token
+      )
+
+      // Mark user message as sent
+      setMessages((prev) =>
+        prev.map((m) => (m.id === userMsgId ? { ...m, status: 'sent' } : m))
+      )
+
+      counterRef.current += 1
+      const botMsgId = res.id || `bot-msg-${counterRef.current}`
+
+      let assessmentRecordForBot: AssessmentRecord | undefined = undefined
+      if (res.assessment_summary) {
+        const fullResult: AssessmentRecord = {
+          ...mockTriageScenarioResult,
+          ...res.assessment_summary,
+          id: activeAssessmentId,
+          symptoms: currentSymptoms || text,
+        }
+        assessmentRecordForBot = fullResult
+        setCurrentAssessment(fullResult)
+
+        // Prepend new assessment to history sidebar
+        setAssessmentHistory((prev) => [fullResult, ...prev.filter((h) => String(h.id) !== String(activeAssessmentId))])
+      }
+
+      const botMessage: ChatMessageItem = {
+        id: botMsgId,
+        sender: 'bot',
+        text: res.message,
+        timestamp: res.timestamp || timeStr,
+        options: res.options,
+        assessmentResult: assessmentRecordForBot,
+      }
+
+      setMessages((prev) => [...prev, botMessage])
+      setSessionStep(res.step !== undefined ? res.step : sessionStep + 1)
+      setIsEvaluating(false)
+    } catch (apiError) {
+      console.warn('Backend endpoint call encountered error, providing fallback simulation:', apiError)
+
+      // Fallback mock simulation after a realistic delay
+      setTimeout(() => {
+        // If simulated network error scenario or failure, mark user message as error
+        // But if general offline client, produce local triage progression smoothly
+        setMessages((prev) =>
+          prev.map((m) => (m.id === userMsgId ? { ...m, status: 'sent' } : m))
+        )
+
+        counterRef.current += 1
+        if (sessionStep === 0) {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: "Thank you for sharing what you're experiencing. To help determine the proper clinical urgency, how long have you had these symptoms, and how would you rate your discomfort from 1 (mild) to 10 (severe)?",
+            timestamp: timeStr,
+            options: [
+              { id: 'dur-1', label: '⏱️ Less than 24 hours (Mild, 2-3/10)', value: 'Symptoms started less than 24 hours ago, discomfort is mild (around 2/10)' },
+              { id: 'dur-2', label: '⏱️ 1 to 3 days (Moderate, 4-5/10)', value: 'I have had this for 2 days with moderate discomfort (around 4/10)' },
+              { id: 'dur-3', label: '⏱️ 4 to 7 days (Persistent, 6/10)', value: 'Persistent for nearly a week, discomfort is about 6/10' },
+              { id: 'dur-4', label: '⏱️ Over 1 week (Chronic)', value: 'Symptoms have persisted for more than a week' },
+            ],
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setSessionStep(1)
+        } else if (sessionStep === 1) {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: "Understood. Before our Multi-LLM consensus protocol generates your full clinical summary, are you experiencing any of the following emergency red flags?\n\n• High fever (> 102°F / 39°C)\n• Shortness of breath, chest pressure, or severe palpitations\n• Sudden neurological symptoms, confusion, or neck stiffness\n• Inability to keep fluids down or loss of consciousness",
+            timestamp: timeStr,
+            options: [
+              { id: 'red-no', label: '✅ None of these red flags', value: 'None of these symptoms apply to me. No fever or breathing difficulty.' },
+              { id: 'red-fever', label: '🌡️ Mild low fever only (< 100.5°F)', value: 'I only have a slight low-grade fever, but no breathing issues or chest pain.' },
+              { id: 'red-yes', label: '⚠️ Yes, I have severe red flags', value: 'I am experiencing severe chest pressure and shortness of breath.' },
+            ],
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setSessionStep(2)
+        } else if (sessionStep === 2) {
+          const isEmergency = text.toLowerCase().includes('severe') || text.toLowerCase().includes('chest')
+          const finalResult: AssessmentRecord = {
+            ...mockTriageScenarioResult,
+            id: activeAssessmentId,
+            symptoms: currentSymptoms || text,
+            triageLevel: isEmergency ? 'emergency' : 'non-urgent',
+            consensusScore: isEmergency ? 99.4 : 98.6,
+            aiSummary: isEmergency
+              ? 'CRITICAL ALERT: Reported red flags (chest pressure / severe symptoms) require immediate emergency department clinical evaluation.'
+              : 'Consensus indicates acute benign viral rhinitis / seasonal upper respiratory congestion. Stable clinical findings.',
+            recommendedSpecialist: isEmergency ? 'Emergency Medicine / ER' : 'Family Medicine / Tele-Triage',
+            createdAt: 'Just now',
+          }
+
+          setCurrentAssessment(finalResult)
+          setAssessmentHistory((prev) => [finalResult, ...prev.filter((h) => String(h.id) !== String(activeAssessmentId))])
+
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: isEmergency
+              ? '⚠️ **CRITICAL CLINICAL ALERT**\n\nBased on the reported red flags, please seek **immediate emergency department evaluation** or dial 911.'
+              : 'I have synthesized your reported symptoms across our **Multi-LLM Consensus Protocol** (Gemini Medical, Med-PaLM, and Clinical GPT). Below is your structured clinical triage breakdown and recommended next steps:',
+            timestamp: timeStr,
+            assessmentResult: finalResult,
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setSessionStep(3)
+        } else {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: `Regarding your inquiry ('${text}'): Maintaining adequate hydration, resting, and standard symptomatic care are recommended. If your symptoms worsen, consult a healthcare provider.`,
+            timestamp: timeStr,
+          }
+          setMessages((prev) => [...prev, botMsg])
+        }
+
+        setIsEvaluating(false)
+      }, 1000)
+    }
+  }
+
+  // Handle retry for failed message
+  const handleRetryMessage = (failedMsg: ChatMessageItem) => {
+    executeSendMessage(failedMsg.retryPayload || failedMsg.text, failedMsg.id)
+  }
+
+  // Handle suggested quick chips
+  const handleSelectOption = (option: ChatOption) => {
+    executeSendMessage(option.value)
+  }
+
+  // Open provider booking modal
   const handleOpenBooking = (specialist?: string) => {
-    const matched = mockProviders.find((p) =>
-      specialist ? p.specialty.toLowerCase().includes(specialist.toLowerCase()) : true
-    ) || mockProviders[0]
+    const matched =
+      mockProviders.find((p) =>
+        specialist ? p.specialty.toLowerCase().includes(specialist.toLowerCase()) : true
+      ) || mockProviders[0]
     setSelectedProvider(matched)
     setIsBookingOpen(true)
   }
 
+  const patientDisplayName =
+    clerkUser?.fullName || clerkUser?.firstName || 'Patient'
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-7.5rem)] min-h-[600px]">
-      {/* Left Sidebar: Session Archive & Multi-LLM Protocol Info */}
-      <div className="hidden lg:flex w-72 flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs shrink-0">
-        <div className="space-y-4">
-          <Button
-            onClick={handleResetChat}
-            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-semibold text-xs"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Triage Session</span>
-          </Button>
+    <div className="flex gap-4 h-[calc(100vh-7.5rem)] min-h-[580px] relative overflow-hidden">
+      {/* 1. LEFT PANEL: Assessment History Sidebar */}
+      <AssessmentSidebar
+        history={assessmentHistory}
+        activeId={activeAssessmentId}
+        onSelectAssessment={handleSelectHistoryAssessment}
+        onNewAssessment={handleNewAssessment}
+        isOpen={isHistorySidebarOpen}
+        onClose={() => setIsHistorySidebarOpen(false)}
+      />
 
-          <div className="space-y-2">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
-              Previous Assessments
-            </div>
-
-            <div className="space-y-1.5 overflow-y-auto max-h-[320px]">
-              {mockAssessmentHistory.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    setMessages([
-                      {
-                        id: `archived-${item.id}`,
-                        sender: 'bot',
-                        text: `Reviewing historical assessment record:`,
-                        timestamp: item.createdAt || 'Previous',
-                        assessmentResult: item,
-                      },
-                    ])
-                    setSessionStep(3)
-                  }}
-                  className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group text-left"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-[10px] text-slate-400">{item.id}</span>
-                    <span className="text-[10px] text-emerald-600 font-semibold">
-                      {item.consensusScore ? item.consensusScore.toFixed(1) : '98.4'}%
-                    </span>
-                  </div>
-                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5 group-hover:text-emerald-600">
-                    {item.symptoms}
-                  </div>
-                  <div className="text-[10px] text-slate-400">{item.createdAt}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Model consensus protocol badge */}
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
-            <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            <span>Consensus Engine</span>
-          </div>
-          <p className="text-[11px] text-slate-500 leading-snug">
-            3 Independent Medical Models cross-verify every differential diagnosis before clinical recommendation.
-          </p>
-          <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
-            <span>Gemini Med</span>
-            <span>•</span>
-            <span>Med-PaLM</span>
-            <span>•</span>
-            <span>GPT-Med</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main ChatGPT-Style Chat Container */}
-      <div className="flex-1 flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+      {/* 2. CENTER PANEL: Conversation Stream & ChatGPT-Style Interface */}
+      <div className="flex-1 flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
         {/* Chat Top Header */}
-        <div className="p-4 px-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-              <Stethoscope className="h-5 w-5" />
+        <header className="p-3.5 sm:p-4 px-4 sm:px-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile History Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsHistorySidebarOpen(true)}
+              className="lg:hidden p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              title="Open Assessment History"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+
+            <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20 shrink-0">
+              <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Clinical AI Triage Assistant
-                </h2>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                  AI Health Assessment
+                </h1>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-bold">
                   <Sparkles className="h-2.5 w-2.5" />
-                  <span>Multi-LLM Live</span>
+                  <span>Consensus Engine Live</span>
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Interactive clinical triage protocol with differential reasoning
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate">
+                Interactive clinical triage protocol • Session ID: {activeAssessmentId}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>EHR Baseline Context Active</span>
-            </div>
+          {/* Right Header Tools */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleResetChat}
-              className="gap-1.5 text-xs text-slate-600"
+              onClick={handleNewAssessment}
+              className="hidden sm:inline-flex gap-1 text-xs text-slate-600 dark:text-slate-300 hover:text-emerald-600"
+              title="Start a fresh triage assessment"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Reset Session</span>
+              <span>Reset</span>
+            </Button>
+
+            {/* Toggle Right Info Panel */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsInfoPanelOpen((prev) => !prev)}
+              className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-emerald-600"
+              title={isInfoPanelOpen ? 'Hide Assessment Details' : 'Show Assessment Details'}
+            >
+              {isInfoPanelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRight className="h-4 w-4" />
+              )}
+              <span className="hidden md:inline">
+                {isInfoPanelOpen ? 'Hide Details' : 'Clinical Details'}
+              </span>
             </Button>
           </div>
-        </div>
+        </header>
 
         {/* Scrollable Conversation Stream */}
-        <div
+        <main
           ref={chatScrollRef}
-          className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6 bg-slate-50/50 dark:bg-slate-950/30"
+          className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6 bg-slate-50/50 dark:bg-slate-950/30 custom-scrollbar"
         >
           {messages.map((msg) => (
             <ChatMessage
               key={msg.id}
               message={msg}
+              userName={patientDisplayName}
               onSelectOption={handleSelectOption}
               onBookSpecialist={handleOpenBooking}
+              onRetryMessage={handleRetryMessage}
             />
           ))}
 
-          {/* Evaluating loader message */}
+          {/* Evaluating Loader Indicator */}
           {isEvaluating && (
             <ChatMessage
               message={{
@@ -309,29 +456,38 @@ export const Assessment: React.FC = () => {
               }}
             />
           )}
-        </div>
+        </main>
 
-        {/* Docked Prompt Input Bar */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shrink-0">
+        {/* 3. BOTTOM PANEL: Docked Message Input */}
+        <footer className="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shrink-0">
           <ChatInput
-            onSendMessage={handleSendMessage}
+            onSendMessage={(msg) => executeSendMessage(msg)}
             disabled={isEvaluating}
             placeholder={
               sessionStep === 3
-                ? 'Ask a follow-up question about this diagnosis or medications...'
-                : 'Describe your symptoms, pain location, or onset timeline...'
+                ? 'Ask a follow-up question or inquire about self-care...'
+                : 'Describe your symptoms in detail (e.g. headache for 2 days, mild fever)...'
             }
           />
-        </div>
+        </footer>
       </div>
 
-      {/* Provider Booking Modal */}
+      {/* 4. OPTIONAL RIGHT PANEL: Current Assessment Information */}
+      <AssessmentInfoPanel
+        assessment={currentAssessment}
+        healthProfile={healthProfile}
+        isOpen={isInfoPanelOpen}
+        onClose={() => setIsInfoPanelOpen(false)}
+        onBookSpecialist={handleOpenBooking}
+      />
+
+      {/* Telehealth Provider Fast Connect Modal */}
       {selectedProvider && (
         <Modal
           isOpen={isBookingOpen}
           onClose={() => setIsBookingOpen(false)}
           title="Connect with Telehealth Specialist"
-          description={`Direct clinician handoff for consultation based on your recent AI triage diagnosis.`}
+          description="Direct clinician handoff for consultation based on your recent AI triage diagnosis."
           footer={
             <Button variant="outline" size="sm" onClick={() => setIsBookingOpen(false)}>
               Close

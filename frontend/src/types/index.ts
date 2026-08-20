@@ -180,7 +180,32 @@ export interface ChatMessageItem {
   assessmentResult?: AssessmentRecord
   isTyping?: boolean
   consensusStatus?: string
+  status?: 'sending' | 'sent' | 'error'
+  error?: string
+  retryPayload?: string
+  step?: number
 }
+
+export interface AssessmentMessagePayload {
+  message: string
+  sender?: string
+  step?: number
+  duration?: string
+  severity?: string
+}
+
+export interface AssessmentMessageResponse {
+  id: string
+  assessment_id: string | number
+  sender: 'bot' | 'user'
+  message: string
+  timestamp: string
+  step: number
+  options?: ChatOption[]
+  assessment_summary?: Partial<AssessmentRecord>
+  status: string
+}
+
 
 export interface HealthcareProvider {
   id: number
