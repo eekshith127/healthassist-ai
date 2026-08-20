@@ -3,7 +3,6 @@ import { NavLink, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
   Stethoscope,
-  FileHeart,
   CreditCard,
   Clock,
   UserCheck,
@@ -23,12 +22,11 @@ export interface SidebarProps {
 
 export const NAV_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'AI Assessment', path: '/assessment', icon: Stethoscope, badge: 'Live AI' },
-  { name: 'Health Profile', path: '/health-profile', icon: FileHeart },
-  { name: 'Digital Health Card', path: '/health-card', icon: CreditCard },
-  { name: 'History & Reports', path: '/history', icon: Clock },
-  { name: 'Care Providers', path: '/providers', icon: UserCheck },
-  { name: 'My Profile', path: '/profile', icon: User },
+  { name: 'AI Health Assessment', path: '/assessment', icon: Stethoscope, badge: 'Live AI' },
+  { name: 'Assessment History', path: '/history', icon: Clock },
+  { name: 'My Health Card', path: '/health-card', icon: CreditCard },
+  { name: 'Healthcare Providers', path: '/providers', icon: UserCheck },
+  { name: 'Profile', path: '/profile', icon: User },
 ]
 
 export const Sidebar: React.FC<SidebarProps> = ({

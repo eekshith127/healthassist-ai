@@ -97,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, className }) =>
           <Link to="/assessment">
             <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-xs font-semibold">
               <Stethoscope className="h-4 w-4" />
-              <span>Start AI Triage</span>
+              <span>Start AI Assessment</span>
             </Button>
           </Link>
 
