@@ -1,13 +1,17 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from backend.app.api.dependencies import get_current_user
+from backend.app.models.user import User
+from backend.app.schemas.user import UserRead
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login")
-def login_placeholder():
-    return {"message": "Auth endpoint placeholder. Real auth to be implemented."}
+@router.get("/me", response_model=UserRead)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
-@router.post("/signup")
-def signup_placeholder():
-    return {"message": "Signup endpoint placeholder. Real auth to be implemented."}
+@router.post("/sync", response_model=UserRead)
+def sync_user(current_user: User = Depends(get_current_user)):
+    return current_user

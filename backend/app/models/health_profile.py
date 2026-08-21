@@ -1,5 +1,6 @@
 import datetime
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
 from backend.app.database.session import Base
 
 
@@ -23,3 +24,5 @@ class HealthProfile(Base):
         default=datetime.datetime.utcnow,
         onupdate=datetime.datetime.utcnow,
     )
+
+    user = relationship("User", back_populates="health_profile")

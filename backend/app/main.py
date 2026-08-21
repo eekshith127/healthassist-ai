@@ -2,15 +2,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.router import api_router
-from backend.app.database.session import Base, engine
 from backend.app.utils.config import settings
 from backend.app.utils.logger import logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing database tables...")
-    Base.metadata.create_all(bind=engine)
     logger.info(f"{settings.APP_NAME} started on {settings.HOST}:{settings.PORT}")
     yield
     logger.info("Shutting down HealthAssist backend...")

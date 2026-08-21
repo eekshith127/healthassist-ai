@@ -10,13 +10,13 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    clerk_user_id: str
 
 
 class UserRead(UserBase):
     id: int
+    clerk_user_id: str
     is_active: bool
-    is_verified: bool
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

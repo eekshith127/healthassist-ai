@@ -1,4 +1,3 @@
-import os
 from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,11 +18,18 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
 
-    # Database Configuration (SQLite default, PostgreSQL supported)
+    # DATABASE_URL must be set to Supabase's transaction pooler URL in deployed environments.
     DATABASE_URL: str = "sqlite:///./healthassist.db"
+    DIRECT_URL: str = ""
+    SUPABASE_URL: str = ""
 
-    # Security
-    SECRET_KEY: str = "healthassist-default-dev-secret-key"
+    # Clerk JWT verification. Clerk owns sign-in and token issuance.
+    CLERK_JWT_KEY: str = ""
+    CLERK_JWKS_URL: str = ""
+    CLERK_ISSUER: str = ""
+
+    # Clerk owns authentication. This is supplied by the deployment environment.
+    SECRET_KEY: str = ""
 
     # AI API Keys (Backend-only)
     OPENAI_API_KEY: str = ""
@@ -44,6 +50,13 @@ class Settings(BaseSettings):
         elif isinstance(v, list):
             return v
         return ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+psycopg://", 1)
+        return value
 
 
 settings = Settings()

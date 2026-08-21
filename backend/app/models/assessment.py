@@ -1,5 +1,6 @@
 import datetime
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Float
+from sqlalchemy.orm import relationship
 from backend.app.database.session import Base
 
 
@@ -17,3 +18,9 @@ class Assessment(Base):
     safety_checked = Column(String(50), default="passed")
     recommended_specialist = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="assessments")
+    patient_case = relationship("PatientCase", back_populates="assessment", uselist=False)
+    model_assessments = relationship("ModelAssessment", back_populates="assessment")
+    consensus_result = relationship("ConsensusResult", back_populates="assessment", uselist=False)
+    final_assessment = relationship("FinalAssessment", back_populates="assessment", uselist=False)
