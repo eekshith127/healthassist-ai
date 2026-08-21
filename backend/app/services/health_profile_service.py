@@ -269,5 +269,23 @@ class HealthProfileService:
             active_medications=profile_dto.medications or [],
         )
 
+    @classmethod
+    def get_patient_case_context(
+        cls,
+        user_id: int,
+        db: Session,
+        chief_complaint: Optional[str] = None,
+    ) -> Optional[PatientCaseContext]:
+        """Fetch user profile and extract minimal privacy-conscious clinical context."""
+        try:
+            profile = cls.get_or_create_profile(db=db, user_id=user_id)
+            if not profile:
+                return None
+            return cls.get_selective_clinical_context(profile, chief_complaint)
+        except Exception:
+            return None
+
 
 health_profile_service = HealthProfileService()
+
+

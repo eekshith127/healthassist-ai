@@ -1,6 +1,6 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Float
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Float, cast
+from sqlalchemy.orm import relationship, foreign
 from backend.app.database.session import Base
 
 
@@ -23,7 +23,13 @@ class Assessment(Base):
 
     # Relationships
     user = relationship("User", back_populates="assessments")
-    patient_case = relationship("PatientCase", back_populates="assessment", uselist=False)
+    patient_case = relationship(
+        "PatientCase",
+        back_populates="assessment",
+        uselist=False,
+        primaryjoin="foreign(PatientCase.assessment_id) == cast(Assessment.id, String)",
+    )
     model_assessments = relationship("ModelAssessment", back_populates="assessment")
     consensus_result = relationship("ConsensusResult", back_populates="assessment", uselist=False)
     final_assessment = relationship("FinalAssessment", back_populates="assessment", uselist=False)
+

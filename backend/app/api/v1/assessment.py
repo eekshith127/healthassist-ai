@@ -1,12 +1,17 @@
 import datetime
+import json
+import re
 import uuid
 from typing import List, Optional, Union
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.app.database.session import get_db
 from backend.app.models.user import User
 from backend.app.models.assessment import Assessment
+from backend.app.models.patient_case import PatientCaseModel
+
 from backend.app.schemas.assessment import (
     AssessmentCreate,
     AssessmentRead,
@@ -120,8 +125,169 @@ def post_assessment_message(
     now_str = datetime.datetime.now().strftime("%I:%M %p")
     msg_id = f"bot-msg-{uuid.uuid4().hex[:8]}"
 
-    # Step 0: Inquire about duration & pain scale
+    # General Conversational Intent Checks (Time, Identity, Doctor Booking, FAQ, Gratitude, Farewells, Greetings)
+    user_lower = user_text.lower()
+    symptom_words = ["pain", "hurt", "cough", "fever", "headache", "migraine", "ache", "rash", "sick", "nausea", "dizzy", "sore", "throat", "vomit", "chest", "breath", "blood", "stomach", "bleed", "burn", "swollen", "itch", "cramp", "fatigue", "chill", "diarrhea"]
+    has_symptom_words = any(s in user_lower for s in symptom_words)
+
+    # 1. Time / Date Queries
+    time_patterns = [r"\bwhat\s+time\b", r"\btell\s+(?:me\s+)?(?:the\s+)?time\b", r"\bcurrent\s+time\b", r"\bwhat(?:'s|\s+is)\s+the\s+time\b", r"\bwhat\s+date\b", r"\btoday(?:'s)?\s+date\b", r"\bwhat\s+day\b"]
+    if any(re.search(pat, user_lower) for pat in time_patterns):
+        now = datetime.datetime.now()
+        time_str = now.strftime("%I:%M %p")
+        date_str = now.strftime("%A, %B %d, %Y")
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=f"The current time is **{time_str}** on **{date_str}**. How can I assist you with your health today?",
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 2. Identity / Capabilities / System Overview
+    identity_patterns = [r"\bwho\s+are\s+you\b", r"\bwhat\s+is\s+healthassist\b", r"\bwhat\s+can\s+you\s+do\b", r"\bhow\s+do\s+you\s+work\b", r"\btell\s+me\s+about\s+yourself\b", r"\bwhat\s+is\s+this\s+app\b"]
+    if any(re.search(pat, user_lower) for pat in identity_patterns):
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=(
+                "I am **HealthAssist AI**, your clinical telehealth assistant. Here is what I can do for you:\n\n"
+                "• **Symptom Triage:** Guide you through a structured intake to evaluate symptoms and clinical urgency.\n"
+                "• **Red-Flag Screening:** Screen for emergency conditions (e.g. severe shortness of breath, chest pressure).\n"
+                "• **Healthcare Provider Connectivity:** Connect you with verified doctors and schedule telehealth consultations.\n"
+                "• **Health Profile Integration:** Keep track of your vitals, chronic conditions, and medications securely.\n\n"
+                "How can I help you today?"
+            ),
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 3. Doctor / Specialist Booking Queries
+    doctor_patterns = [r"\bbook\s+(?:a\s+)?doctor\b", r"\bfind\s+(?:a\s+)?doctor\b", r"\bsee\s+(?:a\s+)?doctor\b", r"\bconnect\s+with\s+(?:a\s+)?doctor\b", r"\bfind\s+specialist\b"]
+    if any(re.search(pat, user_lower) for pat in doctor_patterns) and not has_symptom_words:
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=(
+                "You can easily connect with licensed doctors on HealthAssist! "
+                "Navigate to the **Providers** tab in the main navigation menu to browse verified specialists (Cardiology, Neurology, Family Medicine, Pediatrics), "
+                "check their real-time availability, and schedule a video or in-person consultation."
+            ),
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 4. Gratitude / Courtesies
+    thanks_patterns = [r"\bthank\s+you\b", r"\bthanks\b", r"\bappreciate\s+it\b", r"\bgreat\s+help\b"]
+    if any(re.search(pat, user_lower) for pat in thanks_patterns) and not has_symptom_words:
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message="You're very welcome! I'm glad I could help. Please let me know if you experience any other symptoms or need further medical assistance. Wishing you great health!",
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 5. Farewells
+    farewell_patterns = [r"\bbye\b", r"\bgoodbye\b", r"\bsee\s+you\b", r"\btake\s+care\b", r"\bhave\s+a\s+good\s+day\b"]
+    if any(re.search(pat, user_lower) for pat in farewell_patterns):
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message="Take care and stay healthy! If your symptoms worsen or new concerns arise, feel free to reach out anytime.",
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 6. General Health / Wellness FAQ (Hydration, Blood Pressure, Burns, Sleep)
+    if "burn" in user_lower and not any(k in user_lower for k in ["chest", "breath"]):
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=(
+                "For minor first-degree burns: Cool the burn immediately under cool (not ice-cold) running water for 10–15 minutes. "
+                "Apply a sterile non-stick bandage. Do not apply ice, butter, or oil. "
+                "If the burn is blistering extensively, charred, or covers a large area, please seek urgent medical evaluation."
+            ),
+            timestamp=now_str,
+            step=step,
+        )
+    if ("water" in user_lower or "hydration" in user_lower) and not has_symptom_words:
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=(
+                "For most healthy adults, drinking about **2 to 3 liters (8 to 10 glasses)** of water per day is generally recommended. "
+                "You may need more if you are exercising, in hot weather, or recovering from an illness."
+            ),
+            timestamp=now_str,
+            step=step,
+        )
+    if "blood pressure" in user_lower and not has_symptom_words:
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=(
+                "According to standard medical guidelines, normal resting blood pressure in adults is typically **below 120/80 mmHg**. "
+                "Elevated blood pressure is 120–129 / <80 mmHg, and Stage 1 Hypertension begins at 130/80 mmHg. "
+                "If you are experiencing elevated readings or dizziness/chest tightness, please consult with one of our telehealth providers."
+            ),
+            timestamp=now_str,
+            step=step,
+        )
+
+    # 7. Greetings
+    greeting_words = ["hi", "hello", "hey", "how are you", "how r u", "hi how r u", "how are u", "good morning", "good evening", "good afternoon", "whats up", "what's up"]
+    is_greeting = any(re.search(rf"\b{re.escape(g)}\b", user_lower) for g in greeting_words) and not has_symptom_words
+
+    if is_greeting:
+        reply_text = (
+            "Hello! I'm doing well, thank you for asking. I'm your HealthAssist assistant. "
+            "What health symptoms or concerns are you experiencing today that I can help evaluate?"
+        )
+        options = [
+            ChatOptionSchema(
+                id="opt-1",
+                label="🤕 Throbbing Headache & Sinus Congestion",
+                value="I have a headache with sinus congestion for 2 days",
+            ),
+            ChatOptionSchema(
+                id="opt-2",
+                label="🫁 Dry Cough & Sore Throat",
+                value="I have a persistent dry cough and sore throat",
+            ),
+            ChatOptionSchema(
+                id="opt-3",
+                label="⚡ Lower Back Muscle Soreness",
+                value="I have sharp pain in my lower back after heavy lifting",
+            ),
+            ChatOptionSchema(
+                id="opt-4",
+                label="🩹 Skin Rash or Contact Itch",
+                value="I developed a red itchy rash on my forearm",
+            ),
+        ]
+        return AssessmentMessageResponse(
+            id=msg_id,
+            assessment_id=assessment_id,
+            sender="bot",
+            message=reply_text,
+            timestamp=now_str,
+            step=0,
+            options=options,
+        )
+
+    # Step 0: Inquire about duration & pain scale when symptoms are presented
     if step == 0:
+
         reply_text = (
             "Thank you for sharing what you're experiencing. To help determine the proper clinical urgency, "
             "how long have you had these symptoms, and how would you rate your discomfort from 1 (mild) to 10 (severe)?"
@@ -237,21 +403,36 @@ def post_assessment_message(
         }
 
         # Optionally persist if current user exists and assessment_id is an int
-        if current_user and assessment_id.isdigit():
+        if current_user:
             try:
-                db_record = (
-                    db.query(Assessment)
-                    .filter(Assessment.id == int(assessment_id), Assessment.user_id == current_user.id)
-                    .first()
+                if assessment_id.isdigit():
+                    db_record = (
+                        db.query(Assessment)
+                        .filter(Assessment.id == int(assessment_id), Assessment.user_id == current_user.id)
+                        .first()
+                    )
+                    if db_record:
+                        db_record.ai_summary = ai_summary
+                        db_record.triage_level = triage_level
+                        db_record.consensus_score = consensus_score
+                        db_record.recommended_specialist = specialist
+                        db.commit()
+
+                # Persist PatientCase record for intake tracking
+                pcase = PatientCaseModel(
+                    user_id=current_user.id,
+                    assessment_id=str(assessment_id),
+                    main_complaint=user_text[:200],
+                    symptoms=json.dumps([user_text]),
+                    severity="8" if is_emergency else "4",
+                    red_flags=json.dumps(["chest pressure / shortness of breath"] if is_emergency else []),
+                    information_complete=True,
                 )
-                if db_record:
-                    db_record.ai_summary = ai_summary
-                    db_record.triage_level = triage_level
-                    db_record.consensus_score = consensus_score
-                    db_record.recommended_specialist = specialist
-                    db.commit()
+                db.add(pcase)
+                db.commit()
             except Exception as e:
-                logger.debug(f"Failed to update assessment record in DB: {e}")
+                logger.debug(f"Failed to update assessment/patient case record in DB: {e}")
+
 
         return AssessmentMessageResponse(
             id=msg_id,

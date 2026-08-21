@@ -173,3 +173,18 @@ def get_current_user(
             db.refresh(user)
 
     return user
+
+
+def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Extract and synchronize user if bearer token is provided, else return None."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        return get_current_user(credentials=credentials, db=db)
+    except Exception as e:
+        logger.debug(f"Optional token verification ignored: {e}")
+        return None
+

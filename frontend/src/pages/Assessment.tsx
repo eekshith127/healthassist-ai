@@ -250,7 +250,73 @@ export const Assessment: React.FC = () => {
           prev.map((m) => (m.id === userMsgId ? { ...m, status: 'sent' } : m))
         )
 
-        counterRef.current += 1
+        // Check general conversational intents
+        const lowerText = text.toLowerCase()
+        const symptomKeywords = ['pain', 'hurt', 'cough', 'fever', 'headache', 'migraine', 'ache', 'rash', 'sick', 'nausea', 'dizzy', 'sore', 'throat', 'vomit', 'chest', 'breath', 'blood', 'stomach', 'bleed', 'burn', 'swollen', 'itch']
+        const hasSymptoms = symptomKeywords.some((s) => lowerText.includes(s))
+
+        // Time / Date
+        if (/\b(what time|tell (me )?time|current time|what('s| is) the time|what date|today('s)? date|what day)\b/.test(lowerText)) {
+          const now = new Date()
+          const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          const dateFormatted = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: `The current time is **${timeFormatted}** on **${dateFormatted}**. How can I assist you with your health today?`,
+            timestamp: timeStr,
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setIsEvaluating(false)
+          return
+        }
+
+        // Identity / Overview
+        if (/\b(who are you|what is healthassist|what can you do|how do you work|tell me about yourself|what is this app)\b/.test(lowerText)) {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: `I am **HealthAssist AI**, your clinical telehealth assistant. Here is what I can do for you:\n\n• **Symptom Triage:** Guide you through a structured intake to evaluate symptoms and clinical urgency.\n• **Red-Flag Screening:** Screen for emergency conditions (e.g. chest pressure, dyspnea).\n• **Doctor Connectivity:** Connect you with verified healthcare providers and book consultations.\n• **Health Profile Integration:** Keep track of your vitals, conditions, and medications.\n\nHow can I help you today?`,
+            timestamp: timeStr,
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setIsEvaluating(false)
+          return
+        }
+
+        // Doctor Booking
+        if (/\b(book (a )?doctor|find (a )?doctor|see (a )?doctor|connect with doctor|specialist)\b/.test(lowerText) && !hasSymptoms) {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: `You can easily connect with licensed doctors on HealthAssist! Navigate to the **Providers** tab in the top navigation to browse specialists, view real-time availability, and schedule a video or in-person consultation.`,
+            timestamp: timeStr,
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setIsEvaluating(false)
+          return
+        }
+
+        // Greetings
+        const isGreeting = /\b(hi|hello|hey|how are you|how r u|hi how r u|good morning|good evening|good afternoon|whats up)\b/.test(lowerText) && !hasSymptoms
+        if (isGreeting && sessionStep === 0) {
+          const botMsg: ChatMessageItem = {
+            id: `bot-fallback-${counterRef.current}`,
+            sender: 'bot',
+            text: "Hello! I'm doing well, thank you for asking. I'm your HealthAssist assistant. What symptoms or health concerns are you experiencing today that I can help evaluate?",
+            timestamp: timeStr,
+            options: [
+              { id: 'opt-1', label: '🤕 Throbbing Headache & Sinus Congestion', value: 'I have a headache with sinus congestion for 2 days' },
+              { id: 'opt-2', label: '🫁 Dry Cough & Sore Throat', value: 'I have a persistent dry cough and sore throat' },
+              { id: 'opt-3', label: '⚡ Lower Back Muscle Soreness', value: 'I have sharp pain in my lower back after heavy lifting' },
+              { id: 'opt-4', label: '🩹 Skin Rash or Contact Itch', value: 'I developed a red itchy rash on my forearm' },
+            ],
+          }
+          setMessages((prev) => [...prev, botMsg])
+          setIsEvaluating(false)
+          return
+        }
+
         if (sessionStep === 0) {
           const botMsg: ChatMessageItem = {
             id: `bot-fallback-${counterRef.current}`,

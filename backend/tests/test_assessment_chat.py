@@ -15,6 +15,43 @@ def create_test_auth_headers(sub: str = "user_test_assessment_id"):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_post_assessment_greeting():
+    response = client.post(
+        "/api/assessments/test-sess-100/messages",
+        json={"message": "hi how r u", "step": 0},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sender"] == "bot"
+    assert data["step"] == 0
+    assert "doing well" in data["message"].lower() or "healthassist" in data["message"].lower()
+    assert len(data["options"]) > 0
+
+
+def test_post_assessment_time_query():
+    response = client.post(
+        "/api/assessments/test-sess-100/messages",
+        json={"message": "what time is it?", "step": 0},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sender"] == "bot"
+    assert "current time is" in data["message"].lower() or ":" in data["message"]
+
+
+def test_post_assessment_identity_query():
+    response = client.post(
+        "/api/assessments/test-sess-100/messages",
+        json={"message": "who are you and what can you do?", "step": 0},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sender"] == "bot"
+    assert "healthassist" in data["message"].lower()
+    assert "triage" in data["message"].lower() or "symptom" in data["message"].lower()
+
+
+
 def test_post_assessment_message_step_0():
     response = client.post(
         "/api/assessments/test-sess-100/messages",
@@ -27,6 +64,7 @@ def test_post_assessment_message_step_0():
     assert "duration" in data["message"].lower() or "how long" in data["message"].lower()
     assert data["options"] is not None
     assert len(data["options"]) > 0
+
 
 
 def test_post_assessment_message_step_1_red_flags():

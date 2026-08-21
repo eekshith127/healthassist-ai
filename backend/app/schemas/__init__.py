@@ -17,6 +17,13 @@ from backend.app.schemas.health_profile import (
     HealthProfileResponse,
     PatientCaseContext,
 )
+from backend.app.schemas.intake import (
+    PatientCase,
+    IntakeOutput,
+    IntakeConversationTurn,
+    IntakeMessageRequest,
+    IntakeMessageResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -33,5 +40,11 @@ __all__ = [
     "ChatOptionSchema",
     "HealthProfileResponse",
     "PatientCaseContext",
+    "PatientCase",
+    "IntakeOutput",
+    "IntakeConversationTurn",
+    "IntakeMessageRequest",
+    "IntakeMessageResponse",
 ]
+
 

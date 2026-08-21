@@ -26,5 +26,5 @@ class User(Base):
         "Assessment", back_populates="user", cascade="all, delete-orphan"
     )
     patient_cases = relationship(
-        "PatientCase", back_populates="patient", cascade="all, delete-orphan"
+        "PatientCase", back_populates="user", cascade="all, delete-orphan", foreign_keys="PatientCase.user_id"
     )

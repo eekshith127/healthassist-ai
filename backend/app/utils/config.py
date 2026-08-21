@@ -37,10 +37,15 @@ class Settings(BaseSettings):
     CLERK_JWKS_URL: str = "https://api.clerk.com/v1/jwks"
     CLERK_ISSUER: str = ""
 
-    # AI API Keys (Backend-only)
+    # AI API Keys & Provider Settings (Backend-only)
+    MOCK_MODE: bool = True
+    LLM_PROVIDER: str = "mock"  # mock, gemini, openai, anthropic
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
 
     model_config = SettingsConfigDict(
         env_file=".env",
