@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { MainLayout } from './layouts/MainLayout'
 import { AuthLayout } from './layouts/AuthLayout'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Dashboard } from './pages/Dashboard'
 import { Assessment } from './pages/Assessment'
 import { HealthProfile } from './pages/HealthProfile'
@@ -17,22 +18,26 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth routes */}
+        {/* Public Authentication routes */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
+          <Route path="/login/*" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/signup/*" element={<Signup />} />
         </Route>
 
-        {/* Protected / App routes */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/health-profile" element={<HealthProfile />} />
-          <Route path="/assessment" element={<Assessment />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/health-card" element={<HealthCard />} />
-          <Route path="/providers" element={<Providers />} />
-          <Route path="/profile" element={<Profile />} />
+        {/* Protected Application routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/health-profile" element={<HealthProfile />} />
+            <Route path="/assessment" element={<Assessment />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/health-card" element={<HealthCard />} />
+            <Route path="/providers" element={<Providers />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
         </Route>
 
         {/* Catch all */}

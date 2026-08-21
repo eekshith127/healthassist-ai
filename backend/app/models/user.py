@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from backend.app.database.session import Base
 
@@ -9,10 +9,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     clerk_user_id = Column(String(255), unique=True, index=True, nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    full_name = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True)
-    role = Column(String(50), default="patient")  # patient, doctor, admin
+    email = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime,
@@ -20,6 +18,13 @@ class User(Base):
         onupdate=datetime.datetime.utcnow,
     )
 
-    health_profile = relationship("HealthProfile", back_populates="user", uselist=False)
-    assessments = relationship("Assessment", back_populates="user")
-    patient_cases = relationship("PatientCase", back_populates="patient")
+    # Relationships
+    health_profile = relationship(
+        "HealthProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    assessments = relationship(
+        "Assessment", back_populates="user", cascade="all, delete-orphan"
+    )
+    patient_cases = relationship(
+        "PatientCase", back_populates="patient", cascade="all, delete-orphan"
+    )

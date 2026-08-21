@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # Clerk owns authentication. This is supplied by the deployment environment.
     SECRET_KEY: str = ""
 
+    # Clerk Authentication
+    CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_JWKS_URL: str = "https://api.clerk.com/v1/jwks"
+    CLERK_ISSUER: str = ""
+
     # AI API Keys (Backend-only)
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
