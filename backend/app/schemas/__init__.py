@@ -25,6 +25,15 @@ from backend.app.schemas.intake import (
     IntakeMessageResponse,
 )
 
+from backend.app.schemas.medical_assessment import (
+    PossibleCondition,
+    ModelAssessmentOutput,
+    IndividualModelResult,
+    ModelFailureRecord,
+    MultiModelAssessmentRequest,
+    MultiModelAssessmentResponse,
+)
+
 __all__ = [
     "HealthResponse",
     "UserRead",
@@ -45,6 +54,12 @@ __all__ = [
     "IntakeConversationTurn",
     "IntakeMessageRequest",
     "IntakeMessageResponse",
+    "PossibleCondition",
+    "ModelAssessmentOutput",
+    "IndividualModelResult",
+    "ModelFailureRecord",
+    "MultiModelAssessmentRequest",
+    "MultiModelAssessmentResponse",
 ]
 
 

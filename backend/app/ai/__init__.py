@@ -8,6 +8,26 @@ from backend.app.ai.llm_provider import (
     AnthropicProvider,
     get_llm_provider,
 )
+from backend.app.ai.model_config import (
+    ModelConfig,
+    MultiModelAssessmentConfig,
+    get_default_model_configs,
+    get_default_multi_model_config,
+)
+from backend.app.ai.provider_adapters import (
+    BaseProviderAdapter,
+    GeminiProviderAdapter,
+    OpenAIProviderAdapter,
+    AnthropicProviderAdapter,
+    MockProviderAdapter,
+    get_provider_adapter,
+    register_provider_adapter,
+)
+from backend.app.ai.medical_assessor import (
+    MultiLLMMedicalAssessor,
+    medical_assessor,
+    assess_patient_case,
+)
 
 __all__ = [
     "TriageAgent",
@@ -19,5 +39,19 @@ __all__ = [
     "OpenAIProvider",
     "AnthropicProvider",
     "get_llm_provider",
+    "ModelConfig",
+    "MultiModelAssessmentConfig",
+    "get_default_model_configs",
+    "get_default_multi_model_config",
+    "BaseProviderAdapter",
+    "GeminiProviderAdapter",
+    "OpenAIProviderAdapter",
+    "AnthropicProviderAdapter",
+    "MockProviderAdapter",
+    "get_provider_adapter",
+    "register_provider_adapter",
+    "MultiLLMMedicalAssessor",
+    "medical_assessor",
+    "assess_patient_case",
 ]
 

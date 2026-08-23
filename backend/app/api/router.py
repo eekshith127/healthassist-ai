@@ -5,6 +5,7 @@ from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.assessment import router as assessment_router
 from backend.app.api.v1.providers import router as providers_router
 from backend.app.api.v1.intake import router as intake_router
+from backend.app.api.v1.medical_assessment import router as medical_assessment_router
 from backend.app.api.v1 import v1_router
 
 api_router = APIRouter(prefix="/api")
@@ -16,6 +17,7 @@ api_router.include_router(profile_router)
 api_router.include_router(assessment_router)
 api_router.include_router(providers_router)
 api_router.include_router(intake_router)
+api_router.include_router(medical_assessment_router)
 
 # Also mount under /api/v1 for versioned clients
 api_router.include_router(v1_router, prefix="/v1")
