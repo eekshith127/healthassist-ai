@@ -36,6 +36,18 @@ class PatientCase(BaseModel):
         description="Identified red-flag symptoms requiring emergency triage attention (e.g., dyspnea, severe chest pain)."
     )
 
+    def to_minimized_payload(self) -> Dict[str, Any]:
+        """Returns anonymized, strictly data-minimized payload for external LLM evaluation."""
+        return {
+            "main_complaint": self.main_complaint,
+            "symptoms": self.symptoms,
+            "duration": self.duration,
+            "severity": self.severity,
+            "onset": self.onset,
+            "associated_symptoms": self.associated_symptoms,
+            "red_flags": self.red_flags,
+        }
+
     model_config = ConfigDict(from_attributes=True)
 
 
