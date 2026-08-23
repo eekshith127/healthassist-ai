@@ -39,16 +39,47 @@ class Settings(BaseSettings):
 
     # AI API Keys & Provider Settings (Backend-only)
     MOCK_MODE: bool = True
-    LLM_PROVIDER: str = "mock"  # mock, gemini, openai, anthropic
-    OPENAI_API_KEY: str = ""
+    LLM_PROVIDER: str = "mock"  # mock, gemini, nvidia, ollama, openai, anthropic
+
+    # AI Provider Roles
+    INTAKE_PROVIDER: str = "gemini"
+    ASSESSMENT_PROVIDER_1: str = "nvidia"
+    ASSESSMENT_PROVIDER_2: str = "ollama"
+    ASSESSMENT_PROVIDER_3: str = "model3"
+    JUDGE_PROVIDER: str = "nvidia"
+
+    # 1. Gemini Settings (Intake AI)
     GEMINI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
+    # 2. NVIDIA Settings (Assessment Model #1)
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_MODEL: str = "meta/llama-3.3-70b-instruct"
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+
+    # 3. Ollama Settings (Assessment Model #2)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_API_KEY: str = ""
+    OLLAMA_MODEL: str = "llama3.2"
+
+    # 4. Third Assessment Model Settings (Assessment Model #3)
+    MODEL3_API_KEY: str = ""
+    MODEL3_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    MODEL3_MODEL: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+
+    # 5. AI Judge Settings
+    JUDGE_API_KEY: str = ""
+    JUDGE_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    JUDGE_MODEL: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+
+    # Legacy & Auxiliary Providers
+    OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=["backend/.env", ".env"],
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -66,7 +97,12 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
         if value.startswith("postgresql://"):
-            return value.replace("postgresql://", "postgresql+psycopg://", 1)
+            value = value.replace("postgresql://", "postgresql+psycopg://", 1)
+        # Strip pgbouncer query parameter as psycopg does not accept it as a connection argument
+        if "?pgbouncer=true" in value:
+            value = value.replace("?pgbouncer=true", "")
+        elif "&pgbouncer=true" in value:
+            value = value.replace("&pgbouncer=true", "")
         return value
 
 

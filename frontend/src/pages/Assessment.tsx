@@ -215,11 +215,10 @@ export const Assessment: React.FC = () => {
       let assessmentRecordForBot: AssessmentRecord | undefined = undefined
       if (res.assessment_summary) {
         const fullResult: AssessmentRecord = {
-          ...mockTriageScenarioResult,
           ...res.assessment_summary,
           id: activeAssessmentId,
-          symptoms: currentSymptoms || text,
-        }
+          symptoms: res.assessment_summary.symptoms || currentSymptoms || text,
+        } as AssessmentRecord
         assessmentRecordForBot = fullResult
         setCurrentAssessment(fullResult)
 

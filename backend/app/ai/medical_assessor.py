@@ -19,6 +19,7 @@ from typing import Dict, Any, Optional, List, Union
 from sqlalchemy.orm import Session
 
 from backend.app.schemas.intake import PatientCase
+from backend.app.utils.config import settings
 from backend.app.schemas.medical_assessment import (
     PossibleCondition,
     ModelAssessmentOutput,
@@ -29,6 +30,7 @@ from backend.app.schemas.medical_assessment import (
 from backend.app.ai.model_config import (
     ModelConfig,
     MultiModelAssessmentConfig,
+    get_default_model_configs,
     get_default_multi_model_config,
 )
 from backend.app.ai.provider_adapters import (
@@ -53,6 +55,7 @@ class MultiLLMMedicalAssessor:
         adapters: Optional[List[BaseProviderAdapter]] = None,
     ):
         self.config = config or get_default_multi_model_config()
+        self._custom_adapters = adapters is not None
         self.adapters: List[BaseProviderAdapter] = (
             adapters
             if adapters is not None
@@ -62,6 +65,7 @@ class MultiLLMMedicalAssessor:
     def set_adapters(self, adapters: List[BaseProviderAdapter]) -> None:
         """Dynamically swap adapters at runtime."""
         self.adapters = adapters
+        self._custom_adapters = True
 
     def normalize_patient_case(self, case_input: Union[PatientCase, Dict[str, Any]]) -> PatientCase:
         """Normalizes and validates the patient case ensuring identical schema input for all models."""
@@ -208,7 +212,13 @@ class MultiLLMMedicalAssessor:
         securely on the backend, and returns a consolidated response.
         """
         normalized_case = self.normalize_patient_case(patient_case)
-        total_models = len(self.adapters)
+        if getattr(self, "_custom_adapters", False):
+            active_adapters = self.adapters
+        elif getattr(settings, "MOCK_MODE", False):
+            active_adapters = [get_provider_adapter(model_cfg) for model_cfg in get_default_model_configs()]
+        else:
+            active_adapters = self.adapters
+        total_models = len(active_adapters)
 
         if total_models == 0:
             logger.warning("No model adapters configured for multi-model assessment.")
@@ -225,7 +235,7 @@ class MultiLLMMedicalAssessor:
         # Launch all model adapters concurrently
         tasks = [
             self._evaluate_single_model(adapter, normalized_case)
-            for adapter in self.adapters
+            for adapter in active_adapters
         ]
 
         # Execute with overall timeout
@@ -246,7 +256,7 @@ class MultiLLMMedicalAssessor:
                     error_type="timeout",
                     error_message="Overall multi-model assessment timeout exceeded",
                 )
-                for a in self.adapters
+                for a in active_adapters
             ]
 
         # Collate successful assessments and failures

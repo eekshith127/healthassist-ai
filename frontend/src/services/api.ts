@@ -80,6 +80,17 @@ export const assessmentApi = {
     )
     return response.data
   },
+  analyzeAssessment: async (
+    assessmentId: string | number,
+    token?: string | null
+  ): Promise<any> => {
+    const response = await apiClient.post(
+      `/assessments/${assessmentId}/analyze`,
+      {},
+      authHeaders(token)
+    )
+    return response.data
+  },
 }
 
 export default apiClient

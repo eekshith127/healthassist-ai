@@ -2,7 +2,7 @@ import datetime
 import json
 import re
 import uuid
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -19,6 +19,7 @@ from backend.app.schemas.assessment import (
     AssessmentMessageResponse,
     ChatOptionSchema,
 )
+from backend.app.ai.schemas import FinalAssessmentOutput
 from backend.app.utils.clerk_auth import get_current_user, verify_clerk_token, security
 from backend.app.utils.logger import logger
 
@@ -108,8 +109,12 @@ def get_single_assessment(
     return assessment
 
 
+# Dynamic in-memory state tracking for active chat assessments
+active_chat_sessions: Dict[str, Dict[str, Any]] = {}
+
+
 @router.post("/{assessment_id}/messages", response_model=AssessmentMessageResponse)
-def post_assessment_message(
+async def post_assessment_message(
     assessment_id: str,
     payload: AssessmentMessageRequest,
     current_user: Optional[User] = Depends(get_optional_user),
@@ -117,22 +122,39 @@ def post_assessment_message(
 ):
     """Handles multi-turn conversational health assessment intake.
     
-    Accepts user messages, processes the intake step, and returns structured
-    mock AI responses with follow-up clinical questions, options, or final triage recommendations.
+    Engages the live Gemini Conversational Intake AI and triggers the 3-Model
+    Live Consensus Pipeline when clinical intake is complete.
     """
+    from backend.app.ai.intake import intake_agent
+    from backend.app.ai.orchestrator import orchestrator
+    from backend.app.ai.schemas import PatientCase
+
     user_text = payload.message.strip()
     step = payload.step if payload.step is not None else 0
     now_str = datetime.datetime.now().strftime("%I:%M %p")
     msg_id = f"bot-msg-{uuid.uuid4().hex[:8]}"
 
-    # General Conversational Intent Checks (Time, Identity, Doctor Booking, FAQ, Gratitude, Farewells, Greetings)
+    # Initialize or retrieve session state
+    if assessment_id not in active_chat_sessions:
+        active_chat_sessions[assessment_id] = {
+            "history": [],
+            "patient_case": PatientCase(main_complaint="", symptoms=[]),
+            "step": step,
+        }
+    session = active_chat_sessions[assessment_id]
+
     user_lower = user_text.lower()
-    symptom_words = ["pain", "hurt", "cough", "fever", "headache", "migraine", "ache", "rash", "sick", "nausea", "dizzy", "sore", "throat", "vomit", "chest", "breath", "blood", "stomach", "bleed", "burn", "swollen", "itch", "cramp", "fatigue", "chill", "diarrhea"]
+    symptom_words = [
+        "pain", "hurt", "cough", "fever", "headache", "migraine", "ache", "rash",
+        "sick", "nausea", "dizzy", "sore", "throat", "vomit", "chest", "breath",
+        "blood", "stomach", "bleed", "burn", "swollen", "itch", "cramp", "fatigue",
+        "chill", "diarrhea", "congestion", "sinus", "wheezing"
+    ]
     has_symptom_words = any(s in user_lower for s in symptom_words)
 
     # 1. Time / Date Queries
     time_patterns = [r"\bwhat\s+time\b", r"\btell\s+(?:me\s+)?(?:the\s+)?time\b", r"\bcurrent\s+time\b", r"\bwhat(?:'s|\s+is)\s+the\s+time\b", r"\bwhat\s+date\b", r"\btoday(?:'s)?\s+date\b", r"\bwhat\s+day\b"]
-    if any(re.search(pat, user_lower) for pat in time_patterns):
+    if any(re.search(pat, user_lower) for pat in time_patterns) and not has_symptom_words:
         now = datetime.datetime.now()
         time_str = now.strftime("%I:%M %p")
         date_str = now.strftime("%A, %B %d, %Y")
@@ -145,124 +167,44 @@ def post_assessment_message(
             step=step,
         )
 
-    # 2. Identity / Capabilities / System Overview
+    # 2. Identity / System Overview
     identity_patterns = [r"\bwho\s+are\s+you\b", r"\bwhat\s+is\s+healthassist\b", r"\bwhat\s+can\s+you\s+do\b", r"\bhow\s+do\s+you\s+work\b", r"\btell\s+me\s+about\s+yourself\b", r"\bwhat\s+is\s+this\s+app\b"]
-    if any(re.search(pat, user_lower) for pat in identity_patterns):
+    if any(re.search(pat, user_lower) for pat in identity_patterns) and not has_symptom_words:
         return AssessmentMessageResponse(
             id=msg_id,
             assessment_id=assessment_id,
             sender="bot",
             message=(
-                "I am **HealthAssist AI**, your clinical telehealth assistant. Here is what I can do for you:\n\n"
-                "• **Symptom Triage:** Guide you through a structured intake to evaluate symptoms and clinical urgency.\n"
-                "• **Red-Flag Screening:** Screen for emergency conditions (e.g. severe shortness of breath, chest pressure).\n"
-                "• **Healthcare Provider Connectivity:** Connect you with verified doctors and schedule telehealth consultations.\n"
-                "• **Health Profile Integration:** Keep track of your vitals, chronic conditions, and medications securely.\n\n"
-                "How can I help you today?"
+                "I am **HealthAssist AI**, your intelligent clinical telehealth assistant. Here is how I help:\n\n"
+                "• **Live Clinical Intake:** Conduct conversational intake with Gemini AI.\n"
+                "• **Multi-LLM Consensus:** Evaluate your symptoms across 3 independent AI models concurrently.\n"
+                "• **AI Judge Synthesis:** Summarize clinical findings and recommend appropriate specialist care.\n"
+                "• **Emergency Safety Screening:** Screen for critical red flags with immediate safety overrides.\n\n"
+                "What symptoms or health concerns can I help you assess today?"
             ),
             timestamp=now_str,
             step=step,
         )
 
-    # 3. Doctor / Specialist Booking Queries
-    doctor_patterns = [r"\bbook\s+(?:a\s+)?doctor\b", r"\bfind\s+(?:a\s+)?doctor\b", r"\bsee\s+(?:a\s+)?doctor\b", r"\bconnect\s+with\s+(?:a\s+)?doctor\b", r"\bfind\s+specialist\b"]
-    if any(re.search(pat, user_lower) for pat in doctor_patterns) and not has_symptom_words:
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message=(
-                "You can easily connect with licensed doctors on HealthAssist! "
-                "Navigate to the **Providers** tab in the main navigation menu to browse verified specialists (Cardiology, Neurology, Family Medicine, Pediatrics), "
-                "check their real-time availability, and schedule a video or in-person consultation."
-            ),
-            timestamp=now_str,
-            step=step,
-        )
-
-    # 4. Gratitude / Courtesies
-    thanks_patterns = [r"\bthank\s+you\b", r"\bthanks\b", r"\bappreciate\s+it\b", r"\bgreat\s+help\b"]
-    if any(re.search(pat, user_lower) for pat in thanks_patterns) and not has_symptom_words:
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message="You're very welcome! I'm glad I could help. Please let me know if you experience any other symptoms or need further medical assistance. Wishing you great health!",
-            timestamp=now_str,
-            step=step,
-        )
-
-    # 5. Farewells
-    farewell_patterns = [r"\bbye\b", r"\bgoodbye\b", r"\bsee\s+you\b", r"\btake\s+care\b", r"\bhave\s+a\s+good\s+day\b"]
-    if any(re.search(pat, user_lower) for pat in farewell_patterns):
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message="Take care and stay healthy! If your symptoms worsen or new concerns arise, feel free to reach out anytime.",
-            timestamp=now_str,
-            step=step,
-        )
-
-    # 6. General Health / Wellness FAQ (Hydration, Blood Pressure, Burns, Sleep)
-    if "burn" in user_lower and not any(k in user_lower for k in ["chest", "breath"]):
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message=(
-                "For minor first-degree burns: Cool the burn immediately under cool (not ice-cold) running water for 10–15 minutes. "
-                "Apply a sterile non-stick bandage. Do not apply ice, butter, or oil. "
-                "If the burn is blistering extensively, charred, or covers a large area, please seek urgent medical evaluation."
-            ),
-            timestamp=now_str,
-            step=step,
-        )
-    if ("water" in user_lower or "hydration" in user_lower) and not has_symptom_words:
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message=(
-                "For most healthy adults, drinking about **2 to 3 liters (8 to 10 glasses)** of water per day is generally recommended. "
-                "You may need more if you are exercising, in hot weather, or recovering from an illness."
-            ),
-            timestamp=now_str,
-            step=step,
-        )
-    if "blood pressure" in user_lower and not has_symptom_words:
-        return AssessmentMessageResponse(
-            id=msg_id,
-            assessment_id=assessment_id,
-            sender="bot",
-            message=(
-                "According to standard medical guidelines, normal resting blood pressure in adults is typically **below 120/80 mmHg**. "
-                "Elevated blood pressure is 120–129 / <80 mmHg, and Stage 1 Hypertension begins at 130/80 mmHg. "
-                "If you are experiencing elevated readings or dizziness/chest tightness, please consult with one of our telehealth providers."
-            ),
-            timestamp=now_str,
-            step=step,
-        )
-
-    # 7. Greetings
+    # 3. Greetings
     greeting_words = ["hi", "hello", "hey", "how are you", "how r u", "hi how r u", "how are u", "good morning", "good evening", "good afternoon", "whats up", "what's up"]
     is_greeting = any(re.search(rf"\b{re.escape(g)}\b", user_lower) for g in greeting_words) and not has_symptom_words
 
     if is_greeting:
         reply_text = (
-            "Hello! I'm doing well, thank you for asking. I'm your HealthAssist assistant. "
+            "Hello! I'm doing well, thank you. I'm your HealthAssist assistant. "
             "What health symptoms or concerns are you experiencing today that I can help evaluate?"
         )
         options = [
             ChatOptionSchema(
                 id="opt-1",
                 label="🤕 Throbbing Headache & Sinus Congestion",
-                value="I have a headache with sinus congestion for 2 days",
+                value="I have a throbbing headache with sinus congestion for 2 days",
             ),
             ChatOptionSchema(
                 id="opt-2",
                 label="🫁 Dry Cough & Sore Throat",
-                value="I have a persistent dry cough and sore throat",
+                value="I have a persistent dry cough and low-grade fever for 3 days",
             ),
             ChatOptionSchema(
                 id="opt-3",
@@ -285,12 +227,26 @@ def post_assessment_message(
             options=options,
         )
 
-    # Step 0: Inquire about duration & pain scale when symptoms are presented
-    if step == 0:
+    # Process conversational turn with Gemini Intake AI to extract/update PatientCase
+    intake_turn = await intake_agent.process_turn(
+        user_message=user_text,
+        conversation_history=session["history"],
+        current_case=session["patient_case"],
+    )
 
+    # Update session state with extracted patient case
+    if intake_turn.patient_case:
+        session["patient_case"] = intake_turn.patient_case
+
+    # Append to history
+    session["history"].append({"role": "user", "content": user_text})
+    session["history"].append({"role": "assistant", "content": intake_turn.assistant_message})
+
+    # Step 0: Inquire about duration & pain scale when initial symptoms are presented
+    if step == 0:
         reply_text = (
-            "Thank you for sharing what you're experiencing. To help determine the proper clinical urgency, "
-            "how long have you had these symptoms, and how would you rate your discomfort from 1 (mild) to 10 (severe)?"
+            f"{intake_turn.assistant_message}\n\n"
+            "To help evaluate clinical urgency, how long have you had these symptoms, and how would you rate your discomfort from 1 (mild) to 10 (severe)?"
         )
         options = [
             ChatOptionSchema(
@@ -301,12 +257,12 @@ def post_assessment_message(
             ChatOptionSchema(
                 id="dur-2",
                 label="⏱️ 1 to 3 days (Moderate, 4-5/10)",
-                value="I have had this for 2 days with moderate discomfort (around 4/10)",
+                value="I have had these symptoms for 3 days with moderate discomfort (around 5/10)",
             ),
             ChatOptionSchema(
                 id="dur-3",
-                label="⏱️ 4 to 7 days (Persistent, 6/10)",
-                value="Persistent for nearly a week, discomfort is about 6/10",
+                label="⏱️ 4 to 7 days (Persistent, 6-7/10)",
+                value="Persistent for 5 days, discomfort is noticeable (around 6/10)",
             ),
             ChatOptionSchema(
                 id="dur-4",
@@ -324,13 +280,13 @@ def post_assessment_message(
             options=options,
         )
 
-    # Step 1: Inquire about emergency red-flag safety exclusions
+    # Step 1: Emergency red-flag safety screening
     elif step == 1:
         reply_text = (
             "Understood. Before our Multi-LLM consensus protocol generates your full clinical summary, "
             "are you experiencing any of the following emergency red flags?\n\n"
             "• High fever (> 102°F / 39°C)\n"
-            "• Shortness of breath, chest pressure, or severe palpitations\n"
+            "• Severe shortness of breath, sudden chest pressure, or heart palpitations\n"
             "• Sudden neurological symptoms, confusion, or neck stiffness\n"
             "• Inability to keep fluids down or loss of consciousness"
         )
@@ -338,7 +294,7 @@ def post_assessment_message(
             ChatOptionSchema(
                 id="red-no",
                 label="✅ None of these red flags",
-                value="None of these symptoms apply to me. No fever or breathing difficulty.",
+                value="None of these red flags apply to me. No breathing difficulty or chest pain.",
             ),
             ChatOptionSchema(
                 id="red-fever",
@@ -361,78 +317,95 @@ def post_assessment_message(
             options=options,
         )
 
-    # Step 2: Finalize synthesis & provide structured consensus triage summary
+    # Step 2: Trigger the LIVE Multi-LLM Orchestration Pipeline!
     elif step == 2:
-        is_emergency = any(
-            w in user_text.lower()
-            for w in ["severe", "chest", "breath", "unconscious", "stiff", "102", "emergency"]
+        # Check if user selected the emergency red flag option
+        is_true_emergency = bool(
+            ("severe chest pressure" in user_lower and "no" not in user_lower)
+            or ("shortness of breath" in user_lower and "no" not in user_lower)
+            or ("loss of consciousness" in user_lower)
         )
 
-        triage_level = "emergency" if is_emergency else "non-urgent"
-        consensus_score = 99.4 if is_emergency else 98.6
-        specialist = "Emergency Medicine / ER" if is_emergency else "Family Medicine / Tele-Triage"
+        current_case = session["patient_case"]
+        if is_true_emergency:
+            current_case.red_flags = list(set((current_case.red_flags or []) + ["severe chest pressure / dyspnea"]))
 
-        if is_emergency:
-            reply_text = (
-                "⚠️ **CRITICAL CLINICAL ALERT**\n\n"
-                "Based on the reported red flags (severe symptoms / chest pressure / dyspnea), "
-                "our clinical safety protocol recommends **immediate emergency department evaluation** or calling 911.\n\n"
-                "Do not wait for a routine telemedicine appointment if you are experiencing severe breathing difficulty or chest pain."
-            )
-            ai_summary = "CRITICAL ALERT: Reported red flags require immediate emergency clinical evaluation."
-        else:
-            reply_text = (
-                "I have synthesized your reported symptoms across our **Multi-LLM Consensus Protocol** "
-                "(Gemini Medical, Med-PaLM, and Clinical GPT).\n\n"
-                "• **Primary Impression:** Mild acute viral rhinitis / upper respiratory congestion with secondary tension discomfort.\n"
-                "• **Clinical Consensus Score:** 98.6% multi-model alignment.\n"
-                "• **Recommended Action:** Supportive home care, fluid hydration (2.5L/day), rest, and saline sinus rinses.\n"
-                "• **Recommended Specialist:** Family Medicine / Primary Telehealth Provider if symptoms exceed 5–7 days."
-            )
-            ai_summary = "Consensus indicates benign upper respiratory symptoms without acute red flags. Supportive care recommended."
+        # Execute the 3 live models (NVIDIA Llama 8B, Google Gemini, NVIDIA Model 3) + Consensus + AI Judge + Safety Engine
+        db_session = db if isinstance(db, Session) else None
+        uid = current_user.id if (current_user and hasattr(current_user, "id") and isinstance(current_user.id, int)) else None
+
+        final_output = await orchestrator.execute_pipeline(
+            patient_case=current_case,
+            assessment_id=assessment_id,
+            db=db_session,
+            user_id=uid,
+        )
+
+        # Build differential diagnosis list from consensus and model outputs
+        differential_diagnoses = []
+        seen_names = set()
+        if final_output.model_assessments:
+            for m_id, m_data in final_output.model_assessments.items():
+                for cond in m_data.possible_conditions:
+                    norm_name = cond.name.strip().title()
+                    if norm_name not in seen_names:
+                        seen_names.add(norm_name)
+                        factors_desc = ", ".join(cond.supporting_factors) if cond.supporting_factors else "Clinical presentation"
+                        differential_diagnoses.append({
+                            "name": cond.name,
+                            "probability": cond.score,
+                            "description": factors_desc,
+                        })
+
+        if not differential_diagnoses:
+            differential_diagnoses.append({
+                "name": final_output.leading_condition or "Upper Respiratory Tract Symptoms",
+                "probability": final_output.consensus_score,
+                "description": final_output.explanation[:160] if final_output.explanation else "Synthesized clinical evaluation.",
+            })
+
+        triage_lvl = (
+            "emergency"
+            if (final_output.safety_override or final_output.severity == "CRITICAL")
+            else ("urgent" if final_output.severity in ["HIGH", "severe"] else "non-urgent")
+        )
 
         summary_data = {
             "id": assessment_id,
-            "symptoms": user_text,
-            "triage_level": triage_level,
-            "consensus_score": consensus_score,
-            "ai_summary": ai_summary,
-            "recommended_specialist": specialist,
-            "safety_checked": "passed",
+            "symptoms": current_case.main_complaint or user_text,
+            "duration": current_case.duration or "1 to 3 days",
+            "severity": str(current_case.severity or 5),
+            "triage_level": triage_lvl,
+            "triageLevel": triage_lvl,
+            "ai_summary": final_output.explanation,
+            "aiSummary": final_output.explanation,
+            "consensus_score": final_output.consensus_score,
+            "consensusScore": final_output.consensus_score,
+            "differentialDiagnoses": differential_diagnoses,
+            "recommended_specialist": final_output.recommended_specialty,
+            "recommendedSpecialist": final_output.recommended_specialty,
+            "recommendedAction": final_output.recommended_next_step,
+            "emergencyRedFlags": final_output.red_flags,
+            "safety_checked": "override" if final_output.safety_override else "passed",
             "created_at": now_str,
         }
 
-        # Optionally persist if current user exists and assessment_id is an int
-        if current_user:
-            try:
-                if assessment_id.isdigit():
-                    db_record = (
-                        db.query(Assessment)
-                        .filter(Assessment.id == int(assessment_id), Assessment.user_id == current_user.id)
-                        .first()
-                    )
-                    if db_record:
-                        db_record.ai_summary = ai_summary
-                        db_record.triage_level = triage_level
-                        db_record.consensus_score = consensus_score
-                        db_record.recommended_specialist = specialist
-                        db.commit()
-
-                # Persist PatientCase record for intake tracking
-                pcase = PatientCaseModel(
-                    user_id=current_user.id,
-                    assessment_id=str(assessment_id),
-                    main_complaint=user_text[:200],
-                    symptoms=json.dumps([user_text]),
-                    severity="8" if is_emergency else "4",
-                    red_flags=json.dumps(["chest pressure / shortness of breath"] if is_emergency else []),
-                    information_complete=True,
-                )
-                db.add(pcase)
-                db.commit()
-            except Exception as e:
-                logger.debug(f"Failed to update assessment/patient case record in DB: {e}")
-
+        # Response message combining AI Judge explanation and next steps
+        if final_output.safety_override:
+            reply_text = (
+                "⚠️ **CRITICAL CLINICAL ALERT**\n\n"
+                f"{final_output.explanation}\n\n"
+                "**Action Required:** Please seek immediate emergency medical care."
+            )
+        else:
+            reply_text = (
+                f"**Clinical Consensus Summary ({final_output.model_agreement} Agreement - {final_output.consensus_score}% Score)**\n\n"
+                f"• **Leading Assessment:** {final_output.leading_condition}\n"
+                f"• **Clinical Synthesis:** {final_output.explanation}\n"
+                f"• **Recommended Specialty:** {final_output.recommended_specialty}\n"
+                f"• **Recommended Next Step:** {final_output.recommended_next_step}\n\n"
+                f"_{final_output.disclaimer}_"
+            )
 
         return AssessmentMessageResponse(
             id=msg_id,
@@ -442,14 +415,14 @@ def post_assessment_message(
             timestamp=now_str,
             step=3,
             assessment_summary=summary_data,
+            final_assessment=final_output.model_dump(),
         )
 
     # Step 3+: Ongoing follow-up Q&A
     else:
         reply_text = (
-            f"Regarding your question ('{user_text}'): For mild symptoms, staying well-hydrated, resting, "
-            "and taking over-the-counter analgesics (e.g. acetaminophen) as directed can help relieve discomfort. "
-            "If your symptoms worsen or new red flags develop, please connect with one of our licensed telehealth providers."
+            f"{intake_turn.assistant_message}\n\n"
+            f"If you have further questions or if your symptoms change, our licensed telehealth providers are ready to assist."
         )
         return AssessmentMessageResponse(
             id=msg_id,
@@ -458,5 +431,65 @@ def post_assessment_message(
             message=reply_text,
             timestamp=now_str,
             step=step + 1,
+            can_analyze=True,
         )
+
+
+@router.post("/{assessment_id}/analyze", response_model=FinalAssessmentOutput)
+async def analyze_assessment_pipeline(
+    assessment_id: Union[int, str],
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Executes the complete HealthAssist Multi-LLM AI Assessment Pipeline:
+    
+    1. Evaluates normalized PatientCase
+    2. Runs 3 Independent AI Assessments concurrently (NVIDIA, Ollama, Model 3)
+    3. Calculates pure Python Deterministic Consensus
+    4. Evaluates with AI Judge reasoning model
+    5. Evaluates with Independent Deterministic Safety Engine (Strict Safety Override priority)
+    6. Produces Final Assessment with healthcare provider recommendations
+    7. Securely persists records to database
+    """
+    from backend.app.ai.orchestrator import orchestrator
+    from backend.app.ai.schemas import PatientCase
+
+    # Look up existing PatientCase record
+    patient_case_obj = None
+    if str(assessment_id).isdigit():
+        pcase_record = (
+            db.query(PatientCaseModel)
+            .filter(PatientCaseModel.assessment_id == str(assessment_id))
+            .order_by(PatientCaseModel.created_at.desc())
+            .first()
+        )
+        if pcase_record:
+            patient_case_obj = pcase_record.to_schema()
+
+    if not patient_case_obj:
+        # Check if Assessment record exists
+        if str(assessment_id).isdigit():
+            ass_rec = db.query(Assessment).filter(Assessment.id == int(assessment_id)).first()
+            if ass_rec:
+                patient_case_obj = PatientCase(
+                    main_complaint=ass_rec.symptoms[:100] if ass_rec.symptoms else "General Health Inquiry",
+                    symptoms=[ass_rec.symptoms] if ass_rec.symptoms else ["general symptoms"],
+                    duration=ass_rec.duration,
+                    severity=ass_rec.severity,
+                )
+
+    if not patient_case_obj:
+        patient_case_obj = PatientCase(
+            main_complaint="General Clinical Inquiry",
+            symptoms=["unspecified symptoms"],
+        )
+
+    # Execute end-to-end multi-LLM pipeline
+    final_output = await orchestrator.execute_pipeline(
+        patient_case=patient_case_obj,
+        assessment_id=assessment_id,
+        db=db,
+    )
+    return final_output
+
 

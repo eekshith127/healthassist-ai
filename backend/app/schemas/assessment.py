@@ -53,5 +53,8 @@ class AssessmentMessageResponse(BaseModel):
     step: int
     options: Optional[List[ChatOptionSchema]] = None
     assessment_summary: Optional[Dict[str, Any]] = None
+    patient_case: Optional[Dict[str, Any]] = None
+    final_assessment: Optional[Dict[str, Any]] = None
+    can_analyze: Optional[bool] = False
     status: str = "success"
 

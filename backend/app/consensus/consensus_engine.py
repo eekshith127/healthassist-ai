@@ -1,26 +1,24 @@
-"""Multi-LLM Consensus Engine (Placeholder/Stub).
+"""Multi-LLM Consensus Engine for HealthAssist."""
 
-Responsible for comparing independent LLM outputs and computing agreement
-scores.
-"""
-
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from backend.app.ai.consensus import DeterministicConsensusEngine, consensus_engine
+from backend.app.ai.schemas import ModelAssessmentOutput, ConsensusOutput, PatientCase
 
 
 class ConsensusEngine:
-    """Multi-LLM consensus aggregator."""
+    """Wrapper around the Deterministic Consensus Engine."""
 
     def __init__(self, required_agreement_threshold: float = 0.8):
         self.threshold = required_agreement_threshold
+        self.engine = consensus_engine
 
-    async def compute_consensus(
-        self, candidate_responses: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Placeholder consensus calculation."""
-        return {
-            "status": "ready",
-            "consensus_score": 1.0,
-            "threshold": self.threshold,
-            "agreed": True,
-            "note": "Consensus engine stub initialized.",
-        }
+    def compute_consensus(
+        self,
+        assessments: Dict[str, ModelAssessmentOutput],
+        patient_case: Optional[PatientCase] = None,
+    ) -> ConsensusOutput:
+        """Computes deterministic multi-LLM consensus."""
+        return self.engine.compute_consensus(assessments, patient_case)
+
+
+__all__ = ["ConsensusEngine", "DeterministicConsensusEngine", "consensus_engine"]
