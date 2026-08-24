@@ -500,6 +500,13 @@ async def post_assessment_message(
                     db.commit()
                     db.refresh(new_ass)
                     summary_data["id"] = new_ass.id
+
+                    # Update all ChatMessages for this session to point to new_ass.id
+                    db.query(ChatMessage).filter(
+                        ChatMessage.user_id == current_user.id,
+                        ChatMessage.assessment_id == str(assessment_id),
+                    ).update({"assessment_id": str(new_ass.id)})
+                    db.commit()
                 else:
                     existing_ass.ai_summary = final_output.explanation
                     existing_ass.consensus_score = final_output.consensus_score

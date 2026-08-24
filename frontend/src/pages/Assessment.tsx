@@ -108,7 +108,7 @@ export const Assessment: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [getToken])
+  }, [getToken, clerkUser?.id])
 
   // Handle URL parameter ?id=... to auto-load historical assessment and real messages
   useEffect(() => {
