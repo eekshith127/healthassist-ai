@@ -8,6 +8,7 @@ import {
   RefreshCw,
   PlusCircle,
   AlertTriangle,
+  UserCog,
 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useUser, useAuth } from '@clerk/clerk-react'
@@ -171,6 +172,17 @@ export const HealthCard: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Link to="/health-profile">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-8 px-3 border-[#E5E7EB] text-[#111827] hover:bg-[#F9FAFB]"
+            >
+              <UserCog className="h-3.5 w-3.5 text-[#2563EB]" />
+              <span>Edit Profile</span>
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             size="sm"

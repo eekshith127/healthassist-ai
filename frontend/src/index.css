@@ -74,3 +74,26 @@
   border-radius: 10px;
 }
 
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(50%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes ecgPulse {
+  0%, 100% {
+    opacity: 0.85;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    opacity: 1;
+    stroke-dashoffset: 20;
+  }
+}
+

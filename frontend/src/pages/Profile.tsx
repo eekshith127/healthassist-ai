@@ -1,8 +1,9 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useUser, useClerk, UserProfile } from '@clerk/clerk-react'
 import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { LogOut } from 'lucide-react'
+import { LogOut, FileHeart } from 'lucide-react'
 
 export const Profile: React.FC = () => {
   const { user } = useUser()
@@ -56,7 +57,17 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-[#E5E7EB]">
+          <div className="pt-2 border-t border-[#E5E7EB] space-y-2">
+            <Link to="/health-profile" className="block w-full">
+              <Button
+                size="sm"
+                className="w-full text-xs bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-1.5 h-8"
+              >
+                <FileHeart className="h-3.5 w-3.5" />
+                <span>Edit Health Profile</span>
+              </Button>
+            </Link>
+
             <Button
               variant="outline"
               size="sm"

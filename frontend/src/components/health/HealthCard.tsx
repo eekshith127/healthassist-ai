@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ShieldCheck,
   Phone,
@@ -8,6 +9,7 @@ import {
   Scale,
   Ruler,
   AlertCircle,
+  UserCog,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { HealthProfile } from '../../types'
@@ -316,7 +318,18 @@ export const HealthCardComponent: React.FC<HealthCardProps> = ({
             <span>HL7 FHIR & HIPAA standards compliant</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link to="/health-profile">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 px-3 border-[#E5E7EB] text-[#111827] hover:bg-[#F9FAFB]"
+              >
+                <UserCog className="h-3.5 w-3.5 text-[#2563EB]" />
+                <span>Edit Details</span>
+              </Button>
+            </Link>
+
             {onShowQr && (
               <Button
                 variant="outline"

@@ -11,7 +11,16 @@ import type {
   PublicHealthCardData,
 } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const getBaseUrl = (): string => {
+  let url = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000/api'
+  url = url.trim().replace(/\/+$/, '')
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`
+  }
+  return url
+}
+
+const API_BASE_URL = getBaseUrl()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
