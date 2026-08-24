@@ -42,7 +42,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           <p className="font-bold flex items-center justify-center gap-1.5 mb-1">
             <PhoneCall className="h-4 w-4" /> Immediate Medical Emergency Notice
           </p>
-          If you are experiencing severe chest pain, shortness of breath, sudden numbness, or heavy bleeding, call 911 or visit your nearest Emergency Department immediately.
+          If you are experiencing severe chest pain, shortness of breath, sudden numbness, or heavy bleeding, call 112 or visit your nearest Emergency Department immediately.
         </div>
       )}
 
@@ -54,10 +54,10 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           </Button>
         )}
         {isEmergency && (
-          <a href="tel:911">
+          <a href="tel:112">
             <Button variant="destructive" size="sm" className="gap-2 text-xs font-bold">
               <PhoneCall className="h-3.5 w-3.5" />
-              <span>Call 911 Now</span>
+              <span>Call Emergency (112)</span>
             </Button>
           </a>
         )}

@@ -16,10 +16,10 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 60000,
 })
 
-// Helper to create auth header
+// Helper to attach authorization header
 const authHeaders = (token?: string | null) => {
   return token ? { headers: { Authorization: `Bearer ${token}` } } : {}
 }
@@ -57,8 +57,18 @@ export const assessmentApi = {
     const response = await apiClient.get<AssessmentRecord[]>('/assessments', authHeaders(token))
     return response.data
   },
-  getAssessment: async (id: number, token?: string | null): Promise<AssessmentRecord> => {
+  getAssessment: async (id: number | string, token?: string | null): Promise<AssessmentRecord> => {
     const response = await apiClient.get<AssessmentRecord>(`/assessments/${id}`, authHeaders(token))
+    return response.data
+  },
+  getAssessmentMessages: async (
+    id: number | string,
+    token?: string | null
+  ): Promise<Array<{ id: string; sender: 'bot' | 'user'; text: string; timestamp: string }>> => {
+    const response = await apiClient.get<Array<{ id: string; sender: 'bot' | 'user'; text: string; timestamp: string }>>(
+      `/assessments/${id}/messages`,
+      authHeaders(token)
+    )
     return response.data
   },
   createAssessment: async (
@@ -89,6 +99,29 @@ export const assessmentApi = {
       {},
       authHeaders(token)
     )
+    return response.data
+  },
+}
+
+export const healthCardApi = {
+  getShare: async (token?: string | null): Promise<HealthCardShareInfo> => {
+    const response = await apiClient.get<HealthCardShareInfo>('/health-card/share', authHeaders(token))
+    return response.data
+  },
+  generateShare: async (token?: string | null): Promise<HealthCardShareInfo> => {
+    const response = await apiClient.post<HealthCardShareInfo>('/health-card/share', {}, authHeaders(token))
+    return response.data
+  },
+  revokeShare: async (token?: string | null): Promise<{ message: string; revoked: boolean }> => {
+    const response = await apiClient.post<{ message: string; revoked: boolean }>(
+      '/health-card/share/revoke',
+      {},
+      authHeaders(token)
+    )
+    return response.data
+  },
+  getPublicCard: async (shareToken: string): Promise<PublicHealthCardData> => {
+    const response = await apiClient.get<PublicHealthCardData>(`/health-card/public/${shareToken}`)
     return response.data
   },
 }

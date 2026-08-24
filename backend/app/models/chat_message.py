@@ -12,6 +12,7 @@ class ChatMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     patient_case_id = Column(Integer, ForeignKey("patient_cases.id"), nullable=True, index=True)
+    assessment_id = Column(String(100), nullable=True, index=True)
     role = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)

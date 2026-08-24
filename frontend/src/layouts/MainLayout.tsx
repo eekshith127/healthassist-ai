@@ -7,7 +7,7 @@ export const MainLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row antialiased">
+    <div className="min-h-screen bg-[#F9FAFB] text-[#111827] flex flex-col md:flex-row antialiased">
       {/* Reusable Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -17,7 +17,7 @@ export const MainLayout: React.FC = () => {
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Page Content Container */}
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
       </div>

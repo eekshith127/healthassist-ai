@@ -11,6 +11,7 @@ class User(Base):
     clerk_user_id = Column(String(255), unique=True, index=True, nullable=False)
     email = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
+    full_name = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime,

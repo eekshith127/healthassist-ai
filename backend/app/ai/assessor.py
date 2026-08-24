@@ -133,15 +133,32 @@ class ThreeModelAssessor:
         prompt = self._format_assessment_prompt(patient_case)
         logger.info("Executing 3 independent model assessments concurrently...")
 
-        # Concurrently launch Model 1 (NVIDIA), Model 2 (Gemini/Ollama), and Model 3 (NVIDIA Nemotron)
-        model2_name = getattr(self, "model2_id", "model_2_gemini")
+        # Concurrently launch Model 1 (NVIDIA Llama), Model 2 (Gemini Flash), and Model 3 (NVIDIA Nemotron / Model 3)
         tasks = [
-            self._evaluate_single("model_1_nvidia", self.model1, patient_case, mock_scenario),
-            self._evaluate_single(model2_name, self.model2, patient_case, mock_scenario),
-            self._evaluate_single("model_3_nemotron", self.model3, patient_case, mock_scenario),
+            self._evaluate_single("model_1", self.model1, patient_case, mock_scenario),
+            self._evaluate_single("model_2", self.model2, patient_case, mock_scenario),
+            self._evaluate_single("model_3", self.model3, patient_case, mock_scenario),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        meta_info = {
+            "model_1": {
+                "display_name": getattr(settings, "MODEL_1_NAME", "Clinical Diagnostic AI (Llama 3.1)"),
+                "model_name": getattr(settings, "NVIDIA_MODEL", "meta/llama-3.1-8b-instruct"),
+                "provider": "NVIDIA / Meta Llama",
+            },
+            "model_2": {
+                "display_name": getattr(settings, "MODEL_2_NAME", "General Medical Reasoning AI (Gemini Flash)"),
+                "model_name": getattr(settings, "GEMINI_MODEL", "gemini-flash-lite-latest"),
+                "provider": "Google Gemini",
+            },
+            "model_3": {
+                "display_name": getattr(settings, "MODEL_3_NAME", "Specialist Differential Analyst (Nemotron 30B)"),
+                "model_name": getattr(settings, "MODEL3_MODEL", "meta/llama-3.1-8b-instruct"),
+                "provider": "NVIDIA / Model 3",
+            },
+        }
 
         successful_assessments: Dict[str, ModelAssessmentOutput] = {}
         for res in results:
@@ -151,6 +168,12 @@ class ThreeModelAssessor:
             if isinstance(res, tuple):
                 model_id, output = res
                 if output is not None:
+                    # Enrich with model display info
+                    info = meta_info.get(model_id, {})
+                    output.model_id = model_id
+                    output.display_name = info.get("display_name", model_id)
+                    output.model_name = info.get("model_name", "AI Medical Model")
+                    output.provider = info.get("provider", "Clinical AI")
                     successful_assessments[model_id] = output
 
         logger.info(f"Independent assessments complete: {len(successful_assessments)}/3 models responded.")

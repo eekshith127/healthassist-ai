@@ -4,31 +4,31 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 select-none',
   {
     variants: {
       variant: {
         default:
-          'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500',
+          'bg-[#2563EB] text-white shadow-subtle hover:bg-[#1D4ED8]',
         primary:
-          'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500',
+          'bg-[#2563EB] text-white shadow-subtle hover:bg-[#1D4ED8]',
         destructive:
-          'bg-rose-600 text-white shadow-sm hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700',
+          'bg-[#DC2626] text-white shadow-subtle hover:bg-[#B91C1C]',
         outline:
-          'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-100',
+          'border border-[#E5E7EB] bg-white shadow-subtle hover:bg-[#F3F4F6] text-[#111827]',
         secondary:
-          'bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700',
+          'bg-[#F3F4F6] text-[#111827] hover:bg-[#E5E7EB]',
         subtle:
-          'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-950/80',
+          'bg-[#EFF6FF] text-[#1D4ED8] hover:bg-[#DBEAFE]',
         ghost:
-          'hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100',
-        link: 'text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400 p-0 h-auto',
+          'hover:bg-[#F3F4F6] hover:text-[#111827] text-[#4B5563]',
+        link: 'text-[#2563EB] underline-offset-4 hover:underline p-0 h-auto font-normal',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-8 rounded-lg px-3 text-xs',
-        lg: 'h-11 rounded-xl px-6 text-sm font-semibold',
-        icon: 'h-9 w-9 p-0 rounded-lg',
+        default: 'h-9 px-3.5 py-2 text-sm',
+        sm: 'h-8 rounded-md px-2.5 text-xs',
+        lg: 'h-10 px-4 text-sm font-medium',
+        icon: 'h-8 w-8 p-0 rounded-md',
       },
     },
     defaultVariants: {

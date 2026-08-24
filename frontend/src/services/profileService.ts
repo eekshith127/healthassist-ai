@@ -1,13 +1,8 @@
 import { HealthProfile } from '../types'
-import { mockHealthProfile } from './mockData'
 import { calculateBMI, calculateAge } from '../utils/bmi'
 
-const LOCAL_STORAGE_KEY = 'healthassist_persistent_profile'
-const RAW_API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim()
-const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '')
-
 /**
- * Calculates profile completion breakdown and percentage
+ * Calculates profile completion breakdown and percentage from actual database records.
  */
 export interface ProfileCompletionItem {
   id: string
@@ -26,11 +21,11 @@ export interface ProfileCompletionReport {
 export function calculateProfileCompletion(profile: HealthProfile | null): ProfileCompletionReport {
   if (!profile) {
     return {
-      percentage: 20,
-      completedCount: 1,
+      percentage: 0,
+      completedCount: 0,
       totalCount: 6,
       items: [
-        { id: 'demographics', label: 'Demographics & DOB', completed: true, description: 'Age and biological sex' },
+        { id: 'demographics', label: 'Demographics & DOB', completed: false, description: 'Age and biological sex' },
         { id: 'biometrics', label: 'Biometrics & Blood Group', completed: false, description: 'Height, weight, and blood type' },
         { id: 'conditions', label: 'Medical History', completed: false, description: 'Chronic conditions' },
         { id: 'medications', label: 'Active Medications', completed: false, description: 'Current prescriptions' },
@@ -40,57 +35,66 @@ export function calculateProfileCompletion(profile: HealthProfile | null): Profi
     }
   }
 
-  const hasDemographics = Boolean(profile.dateOfBirth || profile.date_of_birth || profile.sex)
-  const hasBiometrics = Boolean(
-    (profile.heightCm || profile.height_cm) &&
-    (profile.weightKg || profile.weight_kg) &&
-    (profile.bloodGroup || profile.blood_group)
-  )
-  const hasConditions = Array.isArray(profile.medicalConditions || profile.medical_conditions) &&
-    (profile.medicalConditions || profile.medical_conditions)!.length > 0
-  const hasMedications = Array.isArray(profile.medications) && profile.medications.length > 0
-  const hasAllergies = Array.isArray(profile.allergies) && profile.allergies.length > 0
-  const hasEmergency = Boolean(
-    // If emergency contact or profile completed
-    profile.profileCompleted || profile.profile_completed || true
-  )
+  const hasDob = Boolean(profile.dateOfBirth || profile.date_of_birth || profile.age)
+  const hasSex = Boolean(profile.sex || profile.gender)
+  const hasHeight = Boolean((profile.heightCm || profile.height_cm) && Number(profile.heightCm || profile.height_cm) > 0)
+  const hasWeight = Boolean((profile.weightKg || profile.weight_kg) && Number(profile.weightKg || profile.weight_kg) > 0)
+  const hasBlood = Boolean(profile.bloodGroup || profile.blood_group || profile.bloodType || profile.blood_type)
+
+  const hasDemographics = hasDob && hasSex
+  const hasBiometrics = hasHeight && hasWeight && hasBlood
+
+  const conditionsList = profile.medicalConditions || profile.medical_conditions
+  const hasConditions = Array.isArray(conditionsList) && conditionsList.length > 0
+
+  const medicationsList = profile.medications
+  const hasMedications = Array.isArray(medicationsList) && medicationsList.length > 0
+
+  const allergiesList = profile.allergies
+  const hasAllergies = Array.isArray(allergiesList) && allergiesList.length > 0
+
+  const hasEmergency = Boolean(profile.emergencyContact || profile.emergency_contact || profile.emergencyPhone || profile.emergency_phone)
 
   const items: ProfileCompletionItem[] = [
     {
       id: 'demographics',
       label: 'Demographics & Sex',
       completed: hasDemographics,
-      description: `${profile.age || 31} yrs • ${profile.sex || 'Male'}`,
+      description: hasDemographics
+        ? `${profile.age ?? 'Age set'} yrs • ${profile.sex || profile.gender || 'Specified'}`
+        : 'Missing date of birth or sex',
     },
     {
       id: 'biometrics',
       label: 'Biometrics & Blood Group',
       completed: hasBiometrics,
-      description: `${profile.bloodGroup || profile.blood_group || 'O+'} • BMI ${profile.bmi || 23.1}`,
+      description: hasBiometrics
+        ? `${profile.bloodGroup || profile.blood_group || profile.bloodType || 'Type set'} • BMI ${profile.bmi || 'calculated'}`
+        : 'Missing height, weight, or blood group',
     },
     {
       id: 'conditions',
       label: 'Chronic Conditions',
       completed: hasConditions,
-      description: hasConditions ? `${(profile.medicalConditions || profile.medical_conditions)!.length} logged` : 'None logged',
+      description: hasConditions ? `${conditionsList!.length} logged` : 'None logged',
     },
     {
       id: 'medications',
       label: 'Active Prescriptions',
       completed: hasMedications,
-      description: hasMedications ? `${profile.medications!.length} active` : 'None logged',
+      description: hasMedications ? `${medicationsList!.length} active` : 'None logged',
     },
     {
       id: 'allergies',
       label: 'Drug & Food Allergies',
       completed: hasAllergies,
-      description: hasAllergies ? `${profile.allergies!.length} recorded` : 'No known allergies',
+      description: hasAllergies ? `${allergiesList!.length} recorded` : 'No allergies recorded',
     },
     {
       id: 'emergency',
       label: 'Emergency Contact (ICE)',
       completed: hasEmergency,
-      description: 'Primary contact linked',
+      description: hasEmergency ? 'Emergency contact saved' : 'Not provided',
     },
   ]
 
@@ -109,117 +113,63 @@ export function calculateProfileCompletion(profile: HealthProfile | null): Profi
 /**
  * Normalizes backend profile response to frontend interface
  */
-function normalizeProfile(raw: Record<string, any>): HealthProfile {
-  const height = raw.height_cm ?? raw.heightCm ?? 180
-  const weight = raw.weight_kg ?? raw.weightKg ?? 75
-  const dob = raw.date_of_birth ?? raw.dateOfBirth ?? '1994-05-14'
+export function normalizeProfile(raw: Record<string, any> | null): HealthProfile | null {
+  if (!raw) return null
 
-  const bmiEval = calculateBMI(height, weight)
-  const ageVal = calculateAge(dob)
+  const height = raw.height_cm ?? raw.heightCm ?? null
+  const weight = raw.weight_kg ?? raw.weightKg ?? null
+  const dob = raw.date_of_birth ?? raw.dateOfBirth ?? null
 
-  return {
-    id: raw.id ?? 1,
-    userId: raw.user_id ?? raw.userId ?? 1,
-    dateOfBirth: dob,
-    sex: raw.sex ?? raw.gender ?? 'male',
-    heightCm: height,
-    weightKg: weight,
-    bloodGroup: raw.blood_group ?? raw.bloodGroup ?? raw.blood_type ?? 'O+',
-    medicalConditions: raw.medical_conditions ?? raw.medicalConditions ?? raw.chronic_conditions ?? [],
-    medications: raw.medications ?? raw.current_medications ?? [],
-    allergies: raw.allergies ?? [],
-    previousSurgeries: raw.previous_surgeries ?? raw.previousSurgeries ?? [],
-    familyHistory: raw.family_history ?? raw.familyHistory ?? [],
-    profileCompleted: raw.profile_completed ?? raw.profileCompleted ?? raw.is_completed ?? true,
-    bmi: raw.bmi ?? bmiEval?.bmi ?? 23.1,
-    bmiCategory: raw.bmi_category ?? raw.bmiCategory ?? bmiEval?.category ?? 'Normal weight',
-    age: raw.age ?? ageVal ?? 31,
-    updatedAt: raw.updated_at ?? raw.updatedAt ?? new Date().toISOString(),
-  }
-}
+  const bmiEval = height && weight ? calculateBMI(height, weight) : null
+  const ageVal = dob ? calculateAge(dob) : raw.age ?? null
 
-/**
- * Serializes frontend profile to backend schema
- */
-function serializeForBackend(profile: Partial<HealthProfile>): Record<string, any> {
-  return {
-    date_of_birth: profile.dateOfBirth || profile.date_of_birth,
-    sex: profile.sex,
-    height_cm: profile.heightCm || profile.height_cm,
-    weight_kg: profile.weightKg || profile.weight_kg,
-    blood_group: profile.bloodGroup || profile.blood_group,
-    medical_conditions: profile.medicalConditions || profile.medical_conditions,
-    medications: profile.medications,
-    allergies: profile.allergies,
-    previous_surgeries: profile.previousSurgeries || profile.previous_surgeries,
-    family_history: profile.familyHistory || profile.family_history,
-  }
-}
-
-/**
- * Fetches the user's persistent health profile
- */
-export async function fetchHealthProfile(): Promise<HealthProfile> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/profile`, {
-      headers: { 'Content-Type': 'application/json' },
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      const normalized = normalizeProfile(data)
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalized))
-      return normalized
-    }
-  } catch {
-    // Backend offline or running in mock mode - fallback to localStorage or mock
-  }
-
-  const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
-  if (cached) {
+  const parseList = (val: any): string[] => {
+    if (!val) return []
+    if (Array.isArray(val)) return val
     try {
-      return normalizeProfile(JSON.parse(cached))
+      const parsed = JSON.parse(val)
+      if (Array.isArray(parsed)) return parsed
     } catch {
-      // ignore
+      // fallback
     }
+    return String(val).split(',').map((s) => s.trim()).filter(Boolean)
   }
 
-  return normalizeProfile(mockHealthProfile)
-}
-
-/**
- * Updates and persists the health profile
- */
-export async function saveHealthProfile(
-  profileData: Partial<HealthProfile>
-): Promise<HealthProfile> {
-  const payload = serializeForBackend(profileData)
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/profile`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      const normalized = normalizeProfile(data)
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalized))
-      return normalized
-    }
-  } catch {
-    // Backend offline - save to localStorage directly
+  return {
+    id: raw.id ?? null,
+    userId: raw.user_id ?? raw.userId ?? null,
+    dateOfBirth: dob,
+    date_of_birth: dob,
+    sex: raw.sex ?? raw.gender ?? null,
+    gender: raw.gender ?? raw.sex ?? null,
+    heightCm: height,
+    height_cm: height,
+    weightKg: weight,
+    weight_kg: weight,
+    bloodGroup: raw.blood_group ?? raw.bloodGroup ?? raw.blood_type ?? raw.bloodType ?? null,
+    blood_group: raw.blood_group ?? raw.bloodGroup ?? raw.blood_type ?? raw.bloodType ?? null,
+    bloodType: raw.blood_type ?? raw.bloodType ?? raw.blood_group ?? null,
+    blood_type: raw.blood_type ?? raw.bloodType ?? raw.blood_group ?? null,
+    medicalConditions: parseList(raw.medical_conditions ?? raw.medicalConditions ?? raw.chronic_conditions),
+    medical_conditions: parseList(raw.medical_conditions ?? raw.medicalConditions ?? raw.chronic_conditions),
+    medications: parseList(raw.medications ?? raw.current_medications),
+    allergies: parseList(raw.allergies),
+    previousSurgeries: parseList(raw.previous_surgeries ?? raw.previousSurgeries),
+    previous_surgeries: parseList(raw.previous_surgeries ?? raw.previousSurgeries),
+    familyHistory: parseList(raw.family_history ?? raw.familyHistory),
+    family_history: parseList(raw.family_history ?? raw.familyHistory),
+    emergencyContact: raw.emergency_contact ?? raw.emergencyContact ?? null,
+    emergency_contact: raw.emergency_contact ?? raw.emergencyContact ?? null,
+    emergencyPhone: raw.emergency_phone ?? raw.emergencyPhone ?? null,
+    emergency_phone: raw.emergency_phone ?? raw.emergencyPhone ?? null,
+    profileCompleted: Boolean(raw.profile_completed ?? raw.profileCompleted ?? raw.is_completed),
+    profile_completed: Boolean(raw.profile_completed ?? raw.profileCompleted ?? raw.is_completed),
+    is_completed: Boolean(raw.is_completed ?? raw.profile_completed),
+    bmi: raw.bmi ?? bmiEval?.bmi ?? null,
+    bmiCategory: raw.bmi_category ?? raw.bmiCategory ?? bmiEval?.category ?? null,
+    bmi_category: raw.bmi_category ?? raw.bmiCategory ?? bmiEval?.category ?? null,
+    age: ageVal,
+    updatedAt: raw.updated_at ?? raw.updatedAt ?? null,
+    updated_at: raw.updated_at ?? raw.updatedAt ?? null,
   }
-
-  // Calculate local updates
-  const current = await fetchHealthProfile()
-  const updated: HealthProfile = normalizeProfile({
-    ...current,
-    ...profileData,
-    updatedAt: new Date().toISOString(),
-  })
-
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated))
-  return updated
 }

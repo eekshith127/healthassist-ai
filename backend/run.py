@@ -10,9 +10,11 @@ import uvicorn
 from backend.app.utils.config import settings
 
 if __name__ == "__main__":
+    app_dir = Path(__file__).resolve().parent / "app"
     uvicorn.run(
         "backend.app.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,
+        reload_dirs=[str(app_dir)] if settings.DEBUG else None,
     )

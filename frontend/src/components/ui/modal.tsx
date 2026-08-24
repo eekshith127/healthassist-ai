@@ -61,7 +61,7 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Dialog Card */}
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200',
+          'relative w-full rounded-xl bg-white border border-[#E5E7EB] shadow-lg z-10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150',
           sizeClasses,
           className
         )}
@@ -70,37 +70,37 @@ export const Modal: React.FC<ModalProps> = ({
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between p-6 border-b border-slate-100 dark:border-slate-800/80">
-            <div className="space-y-1 pr-4">
+          <div className="flex items-start justify-between p-5 border-b border-[#E5E7EB]">
+            <div className="space-y-0.5 pr-4">
               {title && (
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                <h3 className="text-base font-semibold text-[#111827] leading-tight">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-[#6B7280]">
                   {description}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+              className="p-1 rounded-md text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors"
               aria-label="Close dialog"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto flex-1 text-slate-700 dark:text-slate-300 text-sm">
+        <div className="p-5 overflow-y-auto flex-1 text-[#374151] text-xs leading-relaxed">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="p-4 sm:px-6 sm:py-4 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-end gap-3">
+          <div className="p-4 sm:px-5 sm:py-3.5 bg-[#F9FAFB] border-t border-[#E5E7EB] flex items-center justify-end gap-2">
             {footer}
           </div>
         )}

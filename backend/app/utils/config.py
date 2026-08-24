@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "HealthAssist"
+    APP_NAME: str = "TRISHUL AI"
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     JUDGE_API_KEY: str = ""
     JUDGE_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     JUDGE_MODEL: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+
+    # Model Display Names & Custom Titles
+    MODEL_1_NAME: str = "Clinical Diagnostic AI (Llama 3.1)"
+    MODEL_2_NAME: str = "General Medical Reasoning AI (Gemini Flash)"
+    MODEL_3_NAME: str = "Specialist Differential Analyst (Nemotron 30B)"
+    JUDGE_NAME: str = "Consensus AI Judge"
 
     # Legacy & Auxiliary Providers
     OPENAI_API_KEY: str = ""

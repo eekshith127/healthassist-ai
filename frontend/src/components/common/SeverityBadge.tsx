@@ -13,79 +13,80 @@ export interface SeverityBadgeProps {
 export const SeverityBadge: React.FC<SeverityBadgeProps> = ({
   severity,
   className,
-  showPulse = true,
+  showPulse = false,
   size = 'md',
 }) => {
   const norm = severity.toLowerCase()
 
   const config = {
     emergency: {
-      label: 'Emergency (Immediate 911/ER)',
+      label: 'Emergency',
       shortLabel: 'Emergency',
-      bg: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900',
-      dot: 'bg-rose-500',
+      bg: 'bg-red-50 text-[#DC2626] border-[#FECACA]',
+      dot: 'bg-[#DC2626]',
       icon: ShieldAlert,
     },
     urgent: {
-      label: 'Urgent Care (Within 24 Hours)',
-      shortLabel: 'Urgent Care',
-      bg: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900',
-      dot: 'bg-amber-500',
+      label: 'Urgent Care',
+      shortLabel: 'Urgent',
+      bg: 'bg-amber-50 text-[#D97706] border-[#FDE68A]',
+      dot: 'bg-[#D97706]',
+      icon: AlertTriangle,
+    },
+    moderate: {
+      label: 'Moderate',
+      shortLabel: 'Moderate',
+      bg: 'bg-amber-50 text-[#D97706] border-[#FDE68A]',
+      dot: 'bg-[#D97706]',
       icon: AlertTriangle,
     },
     'non-urgent': {
-      label: 'Non-Urgent (Routine Consultation)',
+      label: 'Non-Urgent',
       shortLabel: 'Non-Urgent',
-      bg: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
-      dot: 'bg-emerald-500',
+      bg: 'bg-emerald-50 text-[#16A34A] border-[#BBF7D0]',
+      dot: 'bg-[#16A34A]',
       icon: CheckCircle,
     },
     'self-care': {
-      label: 'Self-Care & Home Monitoring',
+      label: 'Self-Care',
       shortLabel: 'Self-Care',
-      bg: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-900',
-      dot: 'bg-teal-500',
-      icon: AlertCircle,
+      bg: 'bg-emerald-50 text-[#16A34A] border-[#BBF7D0]',
+      dot: 'bg-[#16A34A]',
+      icon: CheckCircle,
+    },
+    low: {
+      label: 'Low Severity',
+      shortLabel: 'Low',
+      bg: 'bg-emerald-50 text-[#16A34A] border-[#BBF7D0]',
+      dot: 'bg-[#16A34A]',
+      icon: CheckCircle,
     },
   }[norm] || {
     label: severity,
     shortLabel: severity,
-    bg: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-200',
-    dot: 'bg-slate-400',
+    bg: 'bg-gray-50 text-[#4B5563] border-[#E5E7EB]',
+    dot: 'bg-[#9CA3AF]',
     icon: CheckCircle,
   }
 
   const Icon = config.icon
 
   const sizeClasses = {
-    sm: 'text-[11px] px-2 py-0.5 gap-1.5',
-    md: 'text-xs px-2.5 py-1 gap-1.5 font-semibold',
-    lg: 'text-sm px-3.5 py-1.5 gap-2 font-bold',
+    sm: 'text-[11px] px-2 py-0.5 gap-1 font-medium',
+    md: 'text-xs px-2.5 py-0.5 gap-1.5 font-medium',
+    lg: 'text-sm px-3 py-1 gap-1.5 font-medium',
   }[size]
 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border shadow-sm transition-all select-none',
+        'inline-flex items-center rounded-md border select-none transition-colors',
         config.bg,
         sizeClasses,
         className
       )}
     >
-      {showPulse && (
-        <span className="relative flex h-2 w-2">
-          {norm === 'emergency' && (
-            <span
-              className={cn(
-                'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
-                config.dot
-              )}
-            />
-          )}
-          <span className={cn('relative inline-flex rounded-full h-2 w-2', config.dot)} />
-        </span>
-      )}
-      <Icon className={size === 'lg' ? 'h-4 w-4' : 'h-3.5 w-3.5'} />
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', config.dot)} />
       <span>{size === 'sm' ? config.shortLabel : config.label}</span>
     </span>
   )

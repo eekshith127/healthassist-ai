@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from backend.app.main import app
+from backend.app.utils.config import settings
 
 client = TestClient(app)
 
@@ -8,7 +9,7 @@ def test_root_endpoint():
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert "HealthAssist" in data["message"]
+    assert settings.APP_NAME in data["message"]
 
 
 def test_health_check_endpoint():
@@ -17,4 +18,4 @@ def test_health_check_endpoint():
     data = response.json()
     assert data["status"] == "ok"
     assert data["database"] == "connected"
-    assert data["service"] == "HealthAssist"
+    assert data["service"] == settings.APP_NAME

@@ -8,16 +8,19 @@ import { Assessment } from './pages/Assessment'
 import { HealthProfile } from './pages/HealthProfile'
 import { History } from './pages/History'
 import { HealthCard } from './pages/HealthCard'
-import { Providers } from './pages/Providers'
 import { Profile } from './pages/Profile'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
+import { PublicHealthCard } from './pages/PublicHealthCard'
 import { NotFound } from './pages/NotFound'
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Health Card Emergency View (QR Scans) */}
+        <Route path="/health-card/:token" element={<PublicHealthCard />} />
+
         {/* Public Authentication routes */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
@@ -35,7 +38,6 @@ export const App: React.FC = () => {
             <Route path="/assessment" element={<Assessment />} />
             <Route path="/history" element={<History />} />
             <Route path="/health-card" element={<HealthCard />} />
-            <Route path="/providers" element={<Providers />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>

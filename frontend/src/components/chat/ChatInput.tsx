@@ -62,20 +62,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }
 
   return (
-    <div className={cn('w-full max-w-4xl mx-auto space-y-2.5', className)}>
+    <div className={cn('w-full max-w-3xl mx-auto space-y-2', className)}>
       {/* Quick Suggestion Pills */}
       {quickSuggestions && quickSuggestions.length > 0 && !disabled && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
-          <div className="flex items-center gap-1 text-slate-400 shrink-0 font-medium text-[11px]">
-            <Sparkles className="h-3 w-3 text-emerald-500" />
-            <span>Try:</span>
-          </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+          <span className="text-[#9CA3AF] text-[11px] shrink-0 font-medium mr-1">
+            Try:
+          </span>
           {quickSuggestions.map((suggestion, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => onSendMessage(suggestion)}
-              className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200/80 dark:border-slate-700/80 text-[11px] whitespace-nowrap transition-all shrink-0 active:scale-95"
+              className="px-2.5 py-1 rounded-md bg-white border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#4B5563] hover:text-[#111827] text-[11px] whitespace-nowrap transition-colors shrink-0 shadow-subtle"
             >
               {suggestion}
             </button>
@@ -83,8 +82,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Modern ChatGPT-style Chat Box */}
-      <div className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md focus-within:border-emerald-500 dark:focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all p-2.5">
+      {/* Clean Technical Input Box */}
+      <div className="relative rounded-lg border border-[#E5E7EB] bg-white shadow-subtle focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB] transition-colors p-2">
         <textarea
           ref={textareaRef}
           rows={1}
@@ -93,18 +92,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}
-          className="w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none max-h-36 overflow-y-auto leading-relaxed"
+          className="w-full resize-none bg-transparent px-2.5 py-1.5 text-sm text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none max-h-32 overflow-y-auto leading-relaxed"
         />
 
         <div className="flex items-center justify-between pt-1 px-1">
           {/* Left tools: Attach & Voice */}
-          <div className="flex items-center gap-1 text-slate-400">
+          <div className="flex items-center gap-1 text-[#6B7280]">
             <button
               type="button"
               onClick={() => {
-                alert('Attachment upload demo: You can attach past lab PDFs or image scans in clinical review.')
+                alert('Attachment upload: You can attach past lab PDFs or image scans in clinical review.')
               }}
-              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              className="p-1.5 rounded-md hover:bg-[#F3F4F6] hover:text-[#111827] transition-colors"
               title="Attach lab report or image (Demo)"
             >
               <Paperclip className="h-4 w-4" />
@@ -113,10 +112,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               onClick={toggleVoiceDemo}
               className={cn(
-                'p-2 rounded-xl transition-colors',
+                'p-1.5 rounded-md transition-colors',
                 voiceActive
-                  ? 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400 animate-pulse'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
+                  ? 'bg-red-50 text-[#DC2626] animate-pulse'
+                  : 'hover:bg-[#F3F4F6] hover:text-[#111827]'
               )}
               title={voiceActive ? 'Listening...' : 'Dictate symptoms via microphone (Demo)'}
             >
@@ -130,23 +129,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onClick={handleSend}
             disabled={!input.trim() || disabled}
             className={cn(
-              'h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-150',
+              'h-7 w-7 rounded-md flex items-center justify-center transition-colors',
               input.trim() && !disabled
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/25 active:scale-95 cursor-pointer'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                ? 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer'
+                : 'bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed'
             )}
             aria-label="Send symptom message"
           >
-            <ArrowUp className="h-5 w-5" />
+            <ArrowUp className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* Mandatory Medical Disclaimer Footnote */}
-      <div className="text-center">
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 font-normal">
-          <ShieldAlert className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-          <span>This tool provides AI-assisted health awareness and does not provide a definitive medical diagnosis.</span>
+      <div className="text-center pt-0.5">
+        <p className="text-[11px] text-[#6B7280]">
+          This tool provides AI-assisted health awareness and does not constitute a definitive medical diagnosis.
         </p>
       </div>
     </div>

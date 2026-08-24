@@ -65,6 +65,10 @@ class IntakeOutput(BaseModel):
         default_factory=PatientCase,
         description="Current extracted state of the patient case."
     )
+    options: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Dynamic symptom-relevant quick response options for the user."
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -101,5 +105,6 @@ class IntakeMessageResponse(BaseModel):
     assistant_message: str
     information_complete: bool
     patient_case: PatientCase
+    options: Optional[List[Dict[str, str]]] = None
     saved_case_id: Optional[int] = None
     status: str = "success"

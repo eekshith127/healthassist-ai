@@ -11,15 +11,14 @@ export interface HealthStatus {
 export interface User {
   id: number
   email: string
-  fullName: string
+  fullName?: string
+  name?: string
   role?: 'patient' | 'doctor' | 'admin'
   patientId?: string
   avatarUrl?: string
   phone?: string
   bloodType?: string
   dateOfBirth?: string
-  allergiesCount?: number
-  activePrescriptionsCount?: number
 }
 
 export interface UserMe {
@@ -34,86 +33,79 @@ export interface UserMe {
   phone?: string
   bloodType?: string
   dateOfBirth?: string
-  allergiesCount?: number
-  activePrescriptionsCount?: number
   profile_completed: boolean
   created_at: string
 }
 
 export interface HealthProfile {
-  id?: number
-  userId?: number
-  user_id?: number
-  dateOfBirth?: string
-  date_of_birth?: string
-  sex?: string
-  heightCm?: number
-  height_cm?: number
-  weightKg?: number
-  weight_kg?: number
-  bloodGroup?: string
-  blood_group?: string
+  id?: number | null
+  userId?: number | null
+  user_id?: number | null
+  dateOfBirth?: string | null
+  date_of_birth?: string | null
+  sex?: string | null
+  gender?: string | null
+  heightCm?: number | null
+  height_cm?: number | null
+  weightKg?: number | null
+  weight_kg?: number | null
+  bloodGroup?: string | null
+  blood_group?: string | null
+  bloodType?: string | null
+  blood_type?: string | null
   medicalConditions?: string[]
   medical_conditions?: string[]
+  chronicConditions?: string | null
+  chronic_conditions?: string | null
   medications?: string[]
+  currentMedications?: string | null
+  current_medications?: string | null
   allergies?: string[]
   previousSurgeries?: string[]
   previous_surgeries?: string[]
   familyHistory?: string[]
   family_history?: string[]
+  emergencyContact?: string | null
+  emergency_contact?: string | null
+  emergencyPhone?: string | null
+  emergency_phone?: string | null
   profileCompleted?: boolean
   profile_completed?: boolean
-  bmi?: number
-  bmiCategory?: string
-  bmi_category?: string
-  age?: number
-  updatedAt?: string
-  updated_at?: string
+  is_completed?: boolean
+  bmi?: number | null
+  bmiCategory?: string | null
+  bmi_category?: string | null
+  age?: number | null
+  updatedAt?: string | null
+  updated_at?: string | null
 }
 
 export interface HealthProfileData {
-  id?: number
-  user_id?: number
-  age?: number | string | null
+  id?: number | null
+  user_id?: number | null
+  age?: number | null
   gender?: string | null
+  sex?: string | null
+  date_of_birth?: string | null
+  height_cm?: number | null
+  weight_kg?: number | null
   blood_type?: string | null
-  allergies?: string | null
+  blood_group?: string | null
+  allergies?: string[] | string | null
   chronic_conditions?: string | null
+  medical_conditions?: string[] | string | null
   current_medications?: string | null
+  medications?: string[] | string | null
+  previous_surgeries?: string[] | string | null
+  family_history?: string[] | string | null
   emergency_contact?: string | null
   emergency_phone?: string | null
+  bmi?: number | null
+  bmi_category?: string | null
   is_completed?: boolean
-  created_at?: string
-  updated_at?: string
-}
-
-export interface VitalMetric {
-  id: string
-  title: string
-  value: string
-  unit: string
-  status: 'normal' | 'attention' | 'warning'
-  change?: string
-  trend?: 'up' | 'down' | 'stable'
-  updatedAt: string
-  iconName: string
-}
-
-export interface Medication {
-  id: string
-  name: string
-  dosage: string
-  frequency: string
-  prescribedBy: string
-  refillsRemaining: number
-  active: boolean
-}
-
-export interface Allergy {
-  id: string
-  substance: string
-  reaction: string
-  severity: 'mild' | 'moderate' | 'severe' | 'life-threatening'
+  profile_completed?: boolean
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface DifferentialDiagnosis {
@@ -122,10 +114,23 @@ export interface DifferentialDiagnosis {
   description: string
 }
 
-export interface ModelVotes {
-  geminiMed: number
-  medPalm: number
-  clinicalGpt: number
+export interface ModelConditionItem {
+  name: string
+  score: number
+  supporting_factors?: string[]
+  contradicting_factors?: string[]
+}
+
+export interface ModelAssessmentData {
+  model_id?: string
+  model_name?: string
+  display_name?: string
+  provider?: string
+  possible_conditions?: ModelConditionItem[]
+  severity?: string
+  recommended_specialty?: string
+  missing_information?: string[]
+  clinical_reasoning?: string
 }
 
 export interface AssessmentRecord {
@@ -141,15 +146,23 @@ export interface AssessmentRecord {
   differentialDiagnoses?: DifferentialDiagnosis[]
   consensusScore?: number
   consensus_score?: number | null
-  modelVotes?: ModelVotes
+  modelAgreement?: string
+  model_agreement?: string
+  modelAssessments?: Record<string, ModelAssessmentData>
+  model_assessments?: Record<string, ModelAssessmentData>
+  disagreements?: string[]
+  whyConsidered?: string
+  otherPossibilities?: string[]
   safety_checked?: string
   recommended_specialist?: string | null
   recommendedSpecialist?: string
   recommendedAction?: string
+  recommended_next_step?: string
   status?: 'active' | 'resolved' | 'escalated'
   reportedPainScale?: number
   emergencyRedFlags?: string[]
   selfCareAdvice?: string[]
+  disclaimer?: string
   createdAt?: string
   created_at?: string
 }
@@ -203,35 +216,43 @@ export interface AssessmentMessageResponse {
   step: number
   options?: ChatOption[]
   assessment_summary?: Partial<AssessmentRecord>
+  final_assessment?: any
+  finalAssessment?: any
   status: string
 }
 
-
-export interface HealthcareProvider {
-  id: number
-  name: string
-  title: string
-  specialty: string
-  hospital: string
-  rating: number
-  reviewsCount: number
-  availability: string
-  experienceYears?: number
-  imageUrl?: string
-  initials?: string
-  acceptingNewPatients: boolean
-  languages?: string[]
-  telehealthFee?: string
-  nextSlots?: string[]
+export interface HealthCardShareInfo {
+  token: string | null
+  is_active: boolean
+  created_at?: string | null
+  expires_at?: string | null
+  revoked_at?: string | null
+  qr_url?: string | null
 }
 
-export interface UpcomingAppointment {
-  id: string
-  providerName: string
-  specialty: string
-  hospital: string
-  date: string
-  time: string
-  type: 'video' | 'in-person'
-  meetingLink?: string
+export interface PublicHealthCardData {
+  patient_name: string
+  patient_identifier: string
+  age?: number | null
+  sex?: string | null
+  height_cm?: number | null
+  weight_kg?: number | null
+  bmi?: number | null
+  bmi_category?: string | null
+  blood_group?: string | null
+  allergies: string[]
+  medical_conditions: string[]
+  medications: string[]
+  emergency_contact?: string | null
+  emergency_phone?: string | null
+  emergency_phone_dial?: string | null
+  national_emergency_dispatch: string
+  national_emergency_dispatch_dial: string
+  poison_control_centre: string
+  poison_control_centre_dial: string
+  poison_control_name: string
+  created_at?: string | null
+  updated_at?: string | null
+  disclaimer: string
 }
+

@@ -6,6 +6,7 @@ from backend.app.models.patient_case import PatientCase, PatientCaseModel
 from backend.app.models.model_assessment import ModelAssessment
 from backend.app.models.consensus_result import ConsensusResult
 from backend.app.models.final_assessment import FinalAssessment
+from backend.app.models.health_card_share import HealthCardShare
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "ModelAssessment",
     "ConsensusResult",
     "FinalAssessment",
+    "HealthCardShare",
 ]

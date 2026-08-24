@@ -13,6 +13,7 @@ class PatientCase(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     assessment_id = Column(String(100), nullable=True, index=True)
 
     status = Column(String(30), default="open", nullable=False)

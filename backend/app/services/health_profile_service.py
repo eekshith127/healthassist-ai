@@ -3,7 +3,6 @@ import datetime
 from typing import Optional, Tuple, List, Any
 from sqlalchemy.orm import Session
 from backend.app.models.health_profile import HealthProfile
-from backend.app.models.user import User
 from backend.app.schemas.health_profile import (
     HealthProfileUpdate,
     HealthProfileResponse,
@@ -70,7 +69,6 @@ class HealthProfileService:
                 return [parsed.strip()]
             return []
         except Exception:
-            # Fallback to comma separation
             return [item.strip() for item in raw_value.split(",") if item.strip()]
 
     @staticmethod
@@ -85,83 +83,50 @@ class HealthProfileService:
     def _to_response_dto(cls, model: HealthProfile) -> HealthProfileResponse:
         """Converts SQLAlchemy model into enriched HealthProfileResponse."""
         bmi, category = cls.calculate_bmi(model.height_cm, model.weight_kg)
-        age = cls.calculate_age(model.date_of_birth)
+        age = model.age if model.age is not None else cls.calculate_age(model.date_of_birth)
+
+        has_dob = bool(model.date_of_birth or model.age is not None)
+        has_sex = bool(model.sex or model.gender)
+        has_blood = bool(model.blood_group or model.blood_type)
+        is_complete = bool(has_dob and has_sex and has_blood)
 
         return HealthProfileResponse(
             id=model.id,
             user_id=model.user_id,
             date_of_birth=model.date_of_birth,
-            sex=model.sex,
+            sex=model.sex or model.gender,
             height_cm=model.height_cm,
             weight_kg=model.weight_kg,
-            blood_group=model.blood_group,
-            medical_conditions=cls._parse_json_list(model.medical_conditions),
-            medications=cls._parse_json_list(model.medications),
+            blood_group=model.blood_group or model.blood_type,
+            medical_conditions=cls._parse_json_list(model.medical_conditions or model.chronic_conditions),
+            medications=cls._parse_json_list(model.medications or model.current_medications),
             allergies=cls._parse_json_list(model.allergies),
             previous_surgeries=cls._parse_json_list(model.previous_surgeries),
             family_history=cls._parse_json_list(model.family_history),
+            emergency_contact=model.emergency_contact,
+            emergency_phone=model.emergency_phone,
             bmi=bmi,
             bmi_category=category,
             age=age,
-            profile_completed=bool(model.profile_completed),
+            profile_completed=is_complete,
             updated_at=model.updated_at,
         )
 
     @classmethod
     def get_or_create_profile(
-        cls, db: Session, user_id: int = 1
+        cls, db: Session, user_id: int
     ) -> HealthProfileResponse:
         """
         Retrieves the persistent HealthProfile for user_id.
-        If none exists, initializes and saves a default profile.
+        If none exists, initializes an empty profile record.
         """
-        # Ensure user exists or create default mock user if in dev
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            user = User(
-                id=user_id,
-                email="john.doe@healthassist.ai",
-                hashed_password="mock-hashed-password",
-                full_name="John Doe",
-                role="patient",
-                is_active=True,
-                is_verified=True,
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-
         profile = (
             db.query(HealthProfile).filter(HealthProfile.user_id == user_id).first()
         )
         if not profile:
             profile = HealthProfile(
                 user_id=user_id,
-                date_of_birth="1994-05-14",
-                sex="male",
-                height_cm=180.0,
-                weight_kg=75.0,
-                blood_group="O+",
-                medical_conditions=json.dumps(
-                    ["Mild Exercise-Induced Bronchospasm (Asthma)"]
-                ),
-                medications=json.dumps(
-                    [
-                        "Loratadine 10mg Oral Tablet (Daily)",
-                        "Albuterol Inhaler (PRN)",
-                    ]
-                ),
-                allergies=json.dumps(
-                    [
-                        "Penicillin / Amoxicillin (Severe)",
-                        "Peanuts & Tree Nuts (Moderate)",
-                    ]
-                ),
-                previous_surgeries=json.dumps(["Laparoscopic Appendectomy (2016)"]),
-                family_history=json.dumps(
-                    ["Maternal Hypertension", "Paternal Type 2 Diabetes"]
-                ),
-                profile_completed=True,
+                profile_completed=False,
             )
             db.add(profile)
             db.commit()
@@ -174,11 +139,8 @@ class HealthProfileService:
         cls, db: Session, user_id: int, data: HealthProfileUpdate
     ) -> HealthProfileResponse:
         """
-        Updates persistent HealthProfile for user_id.
+        Updates persistent HealthProfile for user_id with real data.
         """
-        # Ensure user exists
-        cls.get_or_create_profile(db, user_id)
-
         profile = (
             db.query(HealthProfile).filter(HealthProfile.user_id == user_id).first()
         )
@@ -188,104 +150,84 @@ class HealthProfileService:
 
         if data.date_of_birth is not None:
             profile.date_of_birth = data.date_of_birth
+            calc_age = cls.calculate_age(data.date_of_birth)
+            if calc_age is not None:
+                profile.age = calc_age
         if data.sex is not None:
             profile.sex = data.sex.lower().strip() if data.sex else None
+            profile.gender = data.sex
         if data.height_cm is not None:
             profile.height_cm = data.height_cm
         if data.weight_kg is not None:
             profile.weight_kg = data.weight_kg
         if data.blood_group is not None:
             profile.blood_group = data.blood_group
+            profile.blood_type = data.blood_group
         if data.medical_conditions is not None:
             profile.medical_conditions = cls._dump_json_list(data.medical_conditions)
+            profile.chronic_conditions = profile.medical_conditions
         if data.medications is not None:
             profile.medications = cls._dump_json_list(data.medications)
+            profile.current_medications = profile.medications
         if data.allergies is not None:
             profile.allergies = cls._dump_json_list(data.allergies)
         if data.previous_surgeries is not None:
             profile.previous_surgeries = cls._dump_json_list(data.previous_surgeries)
         if data.family_history is not None:
             profile.family_history = cls._dump_json_list(data.family_history)
+        if data.emergency_contact is not None:
+            profile.emergency_contact = data.emergency_contact
+        if data.emergency_phone is not None:
+            profile.emergency_phone = data.emergency_phone
 
-        # Check completion
-        has_core = (
-            bool(profile.date_of_birth)
-            and bool(profile.sex)
-            and bool(profile.height_cm)
-            and bool(profile.weight_kg)
-            and bool(profile.blood_group)
-        )
-        profile.profile_completed = has_core
-        profile.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        has_dob = bool(profile.date_of_birth or profile.age is not None)
+        has_sex = bool(profile.sex or profile.gender)
+        has_blood = bool(profile.blood_group or profile.blood_type)
+        profile.profile_completed = bool(has_dob and has_sex and has_blood)
 
         db.commit()
         db.refresh(profile)
-
         return cls._to_response_dto(profile)
 
     @classmethod
     def get_selective_clinical_context(
-        cls,
-        profile_dto: HealthProfileResponse,
-        chief_complaint: Optional[str] = None,
+        cls, profile: HealthProfileResponse, chief_complaint: Optional[str] = None
     ) -> PatientCaseContext:
         """
-        Privacy-guard function: Extracts ONLY clinically relevant attributes
-        needed for PatientCase evaluation during AI symptom triage.
-        Prevents raw, excessive profile leakage to external LLM prompts.
+        Extracts only clinically relevant context for symptom evaluation.
         """
         complaint_lower = (chief_complaint or "").lower()
 
-        # Always include active critical allergies for contraindication screening
-        critical_allergies = list(profile_dto.allergies or [])
-
-        # Filter relevant conditions and medications if applicable
+        # Filter relevant conditions
         relevant_conditions = []
-        for cond in profile_dto.medical_conditions or []:
-            # Include respiratory conditions for cough/asthma, cardiac for chest/BP, etc.
+        for cond in profile.medical_conditions:
             cond_lower = cond.lower()
-            if any(
-                k in complaint_lower
-                for k in ["cough", "breath", "wheez", "asthma"]
-            ) and any(c in cond_lower for c in ["asthma", "bronch", "lung", "copd"]):
+            if (
+                any(w in complaint_lower for w in ["breath", "cough", "wheez", "chest"])
+                and any(w in cond_lower for w in ["asthma", "copd", "bronch", "lung"])
+            ):
                 relevant_conditions.append(cond)
-            elif any(
-                k in complaint_lower
-                for k in ["chest", "heart", "palpitat", "pressure"]
-            ) and any(c in cond_lower for c in ["cardio", "hypertens", "heart"]):
+            elif (
+                any(w in complaint_lower for w in ["dizzy", "headache", "chest", "heart"])
+                and any(w in cond_lower for w in ["hypertension", "cardiac", "heart", "bp"])
+            ):
                 relevant_conditions.append(cond)
-            elif not chief_complaint:
+            elif (
+                any(w in complaint_lower for w in ["thirst", "frequent", "sugar", "dizzy"])
+                and any(w in cond_lower for w in ["diabet", "glucose"])
+            ):
                 relevant_conditions.append(cond)
             else:
-                # Include general chronic condition flag without full raw details
                 relevant_conditions.append(cond)
 
         return PatientCaseContext(
-            age=profile_dto.age,
-            sex=profile_dto.sex,
-            bmi_category=profile_dto.bmi_category,
-            relevant_conditions=relevant_conditions,
-            critical_allergies=critical_allergies,
-            active_medications=profile_dto.medications or [],
+            age=profile.age,
+            sex=profile.sex,
+            bmi_category=profile.bmi_category,
+            relevant_conditions=relevant_conditions[:5],
+            active_medications=profile.medications[:5],
+            critical_allergies=profile.allergies[:5],
         )
-
-    @classmethod
-    def get_patient_case_context(
-        cls,
-        user_id: int,
-        db: Session,
-        chief_complaint: Optional[str] = None,
-    ) -> Optional[PatientCaseContext]:
-        """Fetch user profile and extract minimal privacy-conscious clinical context."""
-        try:
-            profile = cls.get_or_create_profile(db=db, user_id=user_id)
-            if not profile:
-                return None
-            return cls.get_selective_clinical_context(profile, chief_complaint)
-        except Exception:
-            return None
 
 
 health_profile_service = HealthProfileService()
-
-

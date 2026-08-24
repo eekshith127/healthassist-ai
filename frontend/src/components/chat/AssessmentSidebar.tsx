@@ -57,22 +57,22 @@ export const AssessmentSidebar: React.FC<AssessmentSidebarProps> = ({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 lg:static lg:z-auto w-72 sm:w-80 bg-white dark:bg-slate-900 border-r lg:border border-slate-200/80 dark:border-slate-800 lg:rounded-2xl flex flex-col justify-between p-4 shadow-sm transition-all duration-300 shrink-0 h-full max-h-screen lg:max-h-[calc(100vh-7.5rem)]',
+          'fixed inset-y-0 left-0 z-40 lg:static lg:z-auto w-72 bg-white border-r lg:border border-[#E5E7EB] lg:rounded-xl flex flex-col justify-between p-3.5 shadow-subtle transition-all duration-200 shrink-0 h-full max-h-screen lg:max-h-[calc(100vh-6.5rem)] select-none',
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           className
         )}
       >
         {/* Top Header & Actions */}
-        <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+        <div className="space-y-3 flex-1 flex flex-col min-h-0">
           {/* Header title on mobile */}
-          <div className="flex items-center justify-between lg:hidden pb-1 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+          <div className="flex items-center justify-between lg:hidden pb-1 border-b border-[#E5E7EB]">
+            <span className="text-xs font-semibold text-[#111827] uppercase tracking-wider">
               Assessment History
             </span>
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                className="p-1 rounded hover:bg-[#F3F4F6] text-[#6B7280]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -85,37 +85,37 @@ export const AssessmentSidebar: React.FC<AssessmentSidebarProps> = ({
               onNewAssessment()
               if (onClose) onClose()
             }}
-            className="w-full gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20 font-semibold text-xs py-2.5 rounded-xl transition-all active:scale-[0.98]"
+            className="w-full gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-xs py-2 rounded-lg transition-colors"
           >
             <Plus className="h-4 w-4" />
-            <span>New Assessment</span>
+            <span>New assessment</span>
           </Button>
 
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9CA3AF]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search past assessments..."
-              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              placeholder="Search sessions..."
+              className="w-full bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition-colors"
             />
           </div>
 
           {/* Session List */}
-          <div className="flex-1 flex flex-col min-h-0 space-y-1.5">
-            <div className="flex items-center justify-between px-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              <span>Past Sessions</span>
-              <span className="text-[10px] text-slate-400 font-mono">
+          <div className="flex-1 flex flex-col min-h-0 space-y-1">
+            <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
+              <span>Past sessions</span>
+              <span className="font-mono text-[10px] text-[#9CA3AF]">
                 {filteredHistory.length}
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 custom-scrollbar">
               {filteredHistory.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 space-y-2">
-                  <MessageSquare className="h-6 w-6 mx-auto opacity-40" />
+                <div className="p-6 text-center text-[#9CA3AF] space-y-1.5">
+                  <MessageSquare className="h-5 w-5 mx-auto opacity-50" />
                   <p className="text-xs">No assessments found</p>
                 </div>
               ) : (
@@ -132,49 +132,38 @@ export const AssessmentSidebar: React.FC<AssessmentSidebarProps> = ({
                         if (onClose) onClose()
                       }}
                       className={cn(
-                        'w-full text-left p-3 rounded-xl transition-all border group relative',
+                        'w-full text-left p-2.5 rounded-lg transition-colors border text-xs group relative',
                         isActive
-                          ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300/80 dark:border-emerald-800/80 shadow-xs'
-                          : 'bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 border-slate-200/60 dark:border-slate-800/60'
+                          ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]'
+                          : 'bg-white hover:bg-[#F9FAFB] border-[#E5E7EB] text-[#374151]'
                       )}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-mono text-[10px] text-slate-400 truncate max-w-[130px]">
+                        <span className="font-mono text-[10px] text-[#6B7280] truncate">
                           {String(item.id).startsWith('HA-') ? item.id : `#${item.id}`}
                         </span>
 
                         <span
                           className={cn(
-                            'text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider',
+                            'text-[9px] px-1.5 py-0.2 rounded font-medium',
                             triage === 'emergency'
-                              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                              ? 'bg-red-50 text-[#DC2626]'
                               : triage === 'urgent'
-                              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                              : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                              ? 'bg-amber-50 text-[#D97706]'
+                              : 'bg-emerald-50 text-[#16A34A]'
                           )}
                         >
                           {triage}
                         </span>
                       </div>
 
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {item.symptoms || 'Health Assessment Session'}
+                      <div className="font-medium truncate mt-1 group-hover:text-[#2563EB] transition-colors">
+                        {item.symptoms || 'Health assessment session'}
                       </div>
 
-                      <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{item.createdAt || item.created_at || 'Recent'}</span>
-                        </span>
-
-                        <span className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold gap-0.5">
-                          <span>
-                            {item.consensusScore || item.consensus_score
-                              ? `${Number(item.consensusScore || item.consensus_score).toFixed(1)}%`
-                              : '98.5%'}
-                          </span>
-                          <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </span>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-[#9CA3AF]">
+                        <span>{item.createdAt || item.created_at || 'Recent'}</span>
+                        <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </button>
                   )
@@ -184,26 +173,16 @@ export const AssessmentSidebar: React.FC<AssessmentSidebarProps> = ({
           </div>
         </div>
 
-        {/* Bottom Multi-LLM Consensus Card */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>Multi-LLM Consensus</span>
-              </div>
-              <Sparkles className="h-3 w-3 text-emerald-500 animate-pulse" />
+        {/* Bottom Multi-LLM Consensus Info */}
+        <div className="pt-2 border-t border-[#E5E7EB]">
+          <div className="p-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] space-y-1 text-xs text-[#4B5563]">
+            <div className="flex items-center gap-1.5 font-semibold text-[#111827] text-[11px]">
+              <ShieldCheck className="h-3.5 w-3.5 text-[#2563EB]" />
+              <span>Tri-Model Consensus</span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-              Cross-verifying clinical insights across 3 independent medical models.
+            <p className="text-[10px] text-[#6B7280] leading-tight">
+              Llama 3.1 • Gemini Flash • Nemotron 30B
             </p>
-            <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
-              <span>Gemini Med</span>
-              <span>•</span>
-              <span>Med-PaLM</span>
-              <span>•</span>
-              <span>GPT-Med</span>
-            </div>
           </div>
         </div>
       </aside>
